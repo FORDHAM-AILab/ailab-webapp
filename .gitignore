@@ -3,8 +3,4 @@
 .git/
 
 # Virtual Environment
-venv/
-Lib/
-/Scripts/
-Include/
-pyvenv.cfg
+venv/*
