@@ -18,18 +18,18 @@ class ValueAtRisk:
 		# matrix: stock price matrix, each row represents one day price for different tickers, two dimentions ndarray
 		# weight: the weight for portfolio, one dimension array
 		# ----output----
-		if (interval > 0 and interval < 1):
+		if 0 < interval < 1:
 			self.ci = interval
 		else:
 			raise Exception("Invalid confidence interval", interval)
 
-		if (isinstance(matrix, pd.DataFrame)):
+		if isinstance(matrix, pd.DataFrame):
 			matrix = matrix.values
 
-		if (matrix.ndim != 2):
+		if matrix.ndim != 2:
 			raise Exception("Only accept 2 dimensions matrix", matrix.ndim)
 
-		if (len(weights) != matrix.shape[1]):
+		if len(weights) != matrix.shape[1]:
 			raise Exception("Weights Length doesn't match")
 
 		self.input = matrix
@@ -38,7 +38,7 @@ class ValueAtRisk:
 
 		# log return calculation
 		self.returnMatrix = np.nan_to_num(np.diff(np.log(self.input), axis=0))
-		if (not isinstance(weights, np.ndarray)):
+		if not isinstance(weights, np.ndarray):
 			self.weights = np.array(weights)
 		else:
 			self.weights = weights
@@ -59,7 +59,7 @@ class ValueAtRisk:
 		# Approximation: If true, using portfolio return to calculate variance. If false, using cov-var matrix to calculate
 		# ----output----
 		# portfolio variance
-		if Approximation == True:
+		if Approximation:
 			self.variance = np.var(np.dot(self.returnMatrix, self.weights))
 		else:
 			self.variance = np.dot(np.dot(self.weights, np.cov(self.returnMatrix.T)), self.weights.T)
@@ -67,10 +67,15 @@ class ValueAtRisk:
 
 	def var(self, marketValue=0, Approximation=False, window=252):
 		# return parametric value at risk, the variance can be calculated by either cov matrix way or approximate way,
-		# scale the one day VaR according to user specified time period ----Input----- marketValue: the market value
-		# of portfolio, if the value is less or equal zero, function will return percentage result approximation:  If
-		# true, using portfolio return to calculate variance. If false, using cov-var matrix to calculate window:
-		# scale time period, default value is 252 which returns annualized VaR ----output---- Value at Risk in dollar
+		# scale the one day VaR according to user specified time period
+		# ----Input-----
+		# marketValue: the market value of portfolio, if the value is less or equal zero,
+		# function will return percentage result
+		# approximation:  If true, using portfolio return to calculate variance.
+		# If false, using cov-var matrix to calculate
+		# window: scale time period, default value is 252 which returns annualized VaR
+		# ----output----
+		# Value at Risk in dollar
 		# or percentage if input market value is zero
 		if self.returnMatrix.shape[1] != len(self.weights):
 			raise Exception("The weights and portfolio doesn't match")
@@ -85,20 +90,20 @@ class ValueAtRisk:
 		# ----Input-----
 		# interval: significant interval in statistic, range from 0 to 1
 		# ----output----
-		if interval > 0 and interval < 1:
+		if 0 < interval < 1:
 			self.ci = interval
 		else:
 			raise Exception("Invalid confidence interval", interval)
 
 	def setPortfolio(self, matrix):
-		# Change the current portfolio's data and weights
+		# Change the current portfolio's df and weights
 		# ----Input-----
 		# matrix: stock price matrix, each row represents one day price for different tickers, two dimensions ndarray
 		# ----output----
-		if (isinstance(matrix, pd.DataFrame)):
+		if isinstance(matrix, pd.DataFrame):
 			matrix = matrix.values
 
-		if (matrix.ndim != 2):
+		if matrix.ndim != 2:
 			raise Exception("Only accept 2 dimensions matrix", matrix.ndim)
 
 		self.input = matrix
@@ -109,7 +114,10 @@ class ValueAtRisk:
 		# ----Input-----
 		# interval: the weight for portfolio, one dimension array
 		# ----output----
-		if (not isinstance(weights, np.ndarray)):
+		if not isinstance(weights, np.ndarray):
 			self.weights = np.array(weights)
 		else:
 			self.weights = weights
+
+if __name__ == '__main__':
+	pass

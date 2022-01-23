@@ -24,7 +24,7 @@ if __name__ =='__main__':
 
 	result = demo.Homework2(ticker, ttm, Debt)
 	print('\nAsset Value:', result['Asset Price'])
-	print('Default Prob:', result['Default Prob'])
+	print('Default prob:', result['Default prob'])
 	print('Market Cap:', result['Market Cap'])
 
 	k1 = 900

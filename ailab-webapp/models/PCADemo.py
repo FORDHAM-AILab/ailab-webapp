@@ -11,4 +11,4 @@ startDate = '2017-10-2'
 endDate = '2018-8-31'
 
 universe = DataSource.getPriceTable(tickerList,startDate,endDate,localCheck = 'VaR/Data/universe.csv',update = True)
-'Local data from 2017-10-01 to 2018-10-08'
+'Local df from 2017-10-01 to 2018-10-08'

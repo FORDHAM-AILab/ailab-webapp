@@ -430,7 +430,7 @@ def download_file_from_bucket(bucket_name: str, key: str, file_name: Optional[st
 def list_objects_in_bucket(bucket_name: str) -> List[str]:
     """
     Return a list of all objects in a S3 bucket
-    # this assumes data is csv files with headers
+    # this assumes df is csv files with headers
     # Get summary information for all objects in input.py bucket
     # Iterate over the list of object summaries
     """
@@ -475,7 +475,7 @@ def read_input_bucket_key(bucket_name: str, key = str, headings: bool = True,
 
 def read_file_pandas(bucket_name: str, key: str) -> pd.core.frame.DataFrame:
     """
-    Read an object into pandas data format, and print it out.
+    Read an object into pandas df format, and print it out.
     """
     try:
         obj = get_object(bucket_name, key)

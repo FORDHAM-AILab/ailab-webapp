@@ -76,7 +76,7 @@ def find_primes(num_start: int, num_end: int) -> int:
 
 def wrapperFn(data: Dict[str, Union[int, str]]) -> Dict[str, Union[int, str]]:
     """
-    Calculate number of primes between data["start"] and data["end"], and write the result to data["count"]
+    Calculate number of primes between df["start"] and df["end"], and write the result to df["count"]
     """
     try:
         data["count"] = find_primes(data["start"], data["end"])

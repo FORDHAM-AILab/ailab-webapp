@@ -72,7 +72,7 @@ class Homework:
 		GDemo = Geske(rf=rf,steps=steps,vol=vol,ttm=ttm[-1])
 		result = {}
 		result['Asset Price'] = GDemo.getAssetPrice(ttm,Debt,marketCap)
-		result['Default Prob'] = GDemo.calculateProb(s0=result['Asset Price'],ttm = ttm,Debt = Debt)
+		result['Default prob'] = GDemo.calculateProb(s0=result['Asset Price'],ttm = ttm,Debt = Debt)
 		result['Market Cap'] = marketCap
 		return result
 
@@ -125,9 +125,9 @@ print('Homework1',demo.Homework1(tickerList,weight,notional))
 ticker = 'AMZN'
 rf = 0.05
 ttm = [1,2]
-Debt = [6000,20]
+debt = [6000,20]
 # marketCap = 80
-print('\nHomework2',demo.Homework2(ticker,ttm,Debt))
+print('\nHomework2',demo.Homework2(ticker,ttm,debt))
 
 k1 = 900
 t1 = 1
@@ -144,7 +144,7 @@ vol = 0.210609
 div = 0
 pcFlag = 1
 ttm = [t1,t2]
-Debt = [k1,k2]
+debt = [k1,k2]
 sharpRatio = 0.23
 print('\nHomework3',demo.Homework3(ticker,t1,t2,k1,k2,rf,div,sharpRatio,steps = 200))
 '''

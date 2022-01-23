@@ -13,11 +13,11 @@ import numpy as np
 
 if __name__ =='__main__':
 	print('--------Test Main----------')
-	weights = np.array([0.1,0.3,0.4,0.2])
+	weights = np.array([0.25,0.25,0.25,0.25])
 	data = pd.read_csv('VaR/Data/portfolio.csv', index_col='date', dtype=float, parse_dates=True)
 
 
-	print('--------data preview--------')
+	print('--------df preview--------')
 	print(data.head())
 	print('\n--------Parametric Var--------')
 	Demo = ValueAtRisk(0.95,data,weights)
@@ -59,7 +59,7 @@ if __name__ =='__main__':
 	print('\n-------Portfolio PCA VaR---------')
 	portfolioTicker = ['AIR','MMM','DIS','UPS']
 	data = DataSource.getPriceTable(portfolioTicker)
-	# data = pd.read_csv('VaR/Data/portfolio.csv', index_col='date', dtype=float, parse_dates=True)
+	# df = pd.read_csv('VaR/Data/portfolio.csv', index_col='date', dtype=float, parse_dates=True)
 	PDemoValidation.setPortfolio(data)
 	PDemoValidation.setWeights(weights)
 	print('Portfolio PCA VaR(Percentage):', PDemoValidation.var() * 100, '%')

@@ -24,7 +24,7 @@ def secret_client():
 @lru_cache
 def get_secret(secret_name: str) -> dict:
     """
-    Pull secret data from AWS secret manager, return a dictionary of secrets
+    Pull secret df from AWS secret manager, return a dictionary of secrets
     """
     sc = secret_client()
     try:
@@ -80,7 +80,7 @@ def parse_config(path: typing.Optional[str] = default_config_path,
         log_path: !ENV '/var/${LOG_PATH}'
         something_else: !ENV '${AWESOME_ENV_VAR}/var/${A_SECOND_AWESOME_VAR}'
     :param str path: the path to the yaml file
-    :param str data: the yaml data itself as a stream
+    :param str data: the yaml df itself as a stream
     :param str tag: the tag to look for
     :return: the dict configuration
     :rtype: dict[str, T]
@@ -125,7 +125,7 @@ def parse_config(path: typing.Optional[str] = default_config_path,
     elif data:
         cfg = yaml.load(data, Loader=loader)
     else:
-        raise ValueError('Either a path or data should be defined as input')
+        raise ValueError('Either a path or df should be defined as input')
 
     # This is a second pass at parsing and now with secrets
     if 'secrets' in cfg:
