@@ -3,17 +3,18 @@ import pandas as pd
 from typing import List, Tuple, Optional, Union
 from models.utils import *
 from scipy.stats import norm
+import random
 
 
 class Portfolio:
     def __init__(self, df: pd.DataFrame, header: Optional[List[str]] = None, weights: Optional[np.array] = None, port_value: Optional[float] = 1):
 
-        if not isinstance(df, pd.DataFrame):
+        if not isinstance(df, pd.DataFrame): # Is the df stock price?
             raise ValueError("Data must be a pandas dataframe.")
         self.df = df
 
         if port_value is not None and port_value > 0:
-            self.df *= port_value
+            self.df *= port_value # What is port_value? 
 
         if header is not None and len(header) == len(df.columns):
             self.df.columns = header
@@ -30,7 +31,7 @@ class Portfolio:
         self.df = self.df * self.weights
         self.df['Portfolio'] = self.df.sum(axis=1)
 
-        self.log_return = calc_returns(self.df, method='simple')
+        self.log_return = calc_returns(self.df, method='simple') # why use 'simple' instead of 'log' method?
         self.log_return_cov = covariance_matrix(self.log_return)
 
     def basic_info(self):
@@ -63,7 +64,7 @@ class Portfolio:
 
     def mdd(self, window=252):
         """
-
+c
         :param mode: 'rolling' for rolling mdd, 'single' for one single mdd for the whole portfolio
         :param window: rolling window size. Default 252 for annually MDD
         :return: return a df of rolling Maximum Drawdown
@@ -75,7 +76,7 @@ class Portfolio:
         max_daily_dd = daily_dd.rolling(window, min_periods=1).min()
         return max_daily_dd
 
-    def optimization(self, method='Sharpe'):
+    def optimization(self, method='Markowitz'): # modify method from 'Sharpe' to 'Markowitz'
         pass
 
 
