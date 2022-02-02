@@ -7,33 +7,41 @@ import random
 
 
 class Portfolio:
-    def __init__(self, df: pd.DataFrame, header: Optional[List[str]] = None, weights: Optional[np.array] = None, port_value: Optional[float] = 1):
-
-        if not isinstance(df, pd.DataFrame): # Is the df stock price?
+    def __init__(self, df: pd.DataFrame, header: Optional[List[str]] = None, weights: Optional[np.array] = None):
+        # read dataframe 
+        # Suppose df is stock price (index is date; columns are tickers)
+        if not isinstance(df, pd.DataFrame): 
             raise ValueError("Data must be a pandas dataframe.")
         self.df = df
-
-        if port_value is not None and port_value > 0:
-            self.df *= port_value # What is port_value? 
-
+        
+        # read header (may remove?)
         if header is not None and len(header) == len(df.columns):
             self.df.columns = header
-
+            
+        # set 'date' column as dataframe index
         date_cols = [col for col in df.columns if 'date' in col.lower()]
         if len(date_cols) > 0:
             self.df.set_index(date_cols)
             self.df.drop(date_cols, axis=1, inplace=True)
+        
+        # read weight; null then input average weight
         if weights is not None and len(weights) == len(self.df.columns):
             self.weights = weights
         else:
             self.weights = np.full(len(self.df.columns), 1 / len(self.df.columns))
+        
+        # calculate log return dataframe
+        self.log_return = calc_returns(self.df, method='log') 
+        self.log_return = self.log_return.dropna(inplace=False)
+        self.log_return_cov = covariance_matrix(self.log_return)
+        
+        '''
+        # weighted log return
         self.df = self.df.astype(float)
         self.df = self.df * self.weights
         self.df['Portfolio'] = self.df.sum(axis=1)
-
-        self.log_return = calc_returns(self.df, method='simple') # why use 'simple' instead of 'log' method?
-        self.log_return_cov = covariance_matrix(self.log_return)
-
+        '''
+        
     def basic_info(self):
         basic_info = self.log_return.describe()
         basic_info.loc['Annualized Return'] = basic_info.loc['mean'] * 252
