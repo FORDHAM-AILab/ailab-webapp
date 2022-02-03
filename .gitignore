@@ -4,3 +4,4 @@
 
 # Virtual Environment
 venv/*
+.idea
