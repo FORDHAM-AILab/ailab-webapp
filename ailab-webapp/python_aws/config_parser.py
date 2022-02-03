@@ -16,6 +16,7 @@ default_secret_keys = None
 sub_modules = ['redis', 'mongo']
 db_required_fields = ["host", "username", "password", "database", "port"]
 
+
 @lru_cache
 def secret_client():
     return boto3.client(service_name='secretsmanager')

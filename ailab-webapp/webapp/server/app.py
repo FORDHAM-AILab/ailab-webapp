@@ -6,7 +6,6 @@ from botocore.exceptions import ClientError
 import re
 
 from starlette.middleware.cors import CORSMiddleware
-
 from python_aws import s3
 from python_aws.utils import save_upload_file
 from fastapi import FastAPI, File, UploadFile, Query
@@ -15,13 +14,15 @@ import traceback
 from webapp.server import CONSTS
 import boto3
 from webapp.data.stock import *
+from webapp.data.options import *
 from models.Binomial import BinomialTree
 from models.Geske import Geske
-from models.Liquidity import Liquidity
+from models.Options import options
 from models.Portfolio.portfolio import Portfolio
 from webapp.server.generic import ResultResponse, ReceiveTag, Data
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 app = FastAPI()
 
@@ -124,12 +125,60 @@ def load_hist_stock_price(start_date, end_date, q: List[str] = Query(None)):
     return {i: stock_price[i].to_list() for i in stock_price.columns}
 
 
+@app.get("/data/load_single_hist_stock_price/{ticker}/{start_date}/{end_date}", tags=['data'])
+def load_full_hist_stock_price(ticker, start_date, end_date):
+    try:
+        result = get_single_hist_price(ticker, start_date, end_date)
+        result = result.to_json(orient='records')
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status=0, result=result)
+
+
 @app.get("/stock/get_analysis_info/{ticker}", tags=['stock'])
 def get_analysis_info_api(ticker):
     try:
         result = get_analysis_info(ticker)
         for k, v in result.items():
             result[k] = v.to_json(orient='records')
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status=0, result=result)
+
+
+@app.get("/options/get_options_expiration_date/{ticker}")
+def get_options_expiration_date_api(ticker):
+    try:
+        result = get_options_expiration_date(ticker)
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status=0, result=result)
+
+
+@app.post("/options/get_options_data_api")
+def get_options_data_api(requestBody: dict):
+    try:
+        result = get_options_data(requestBody['ticker'], datetime.strptime(requestBody['date'], '%B %d, %Y'),
+                                  requestBody['options_type'])
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status=0, result=result)
+
+
+@app.post("/options/options_pricing")
+def options_pricing_api(request_body:dict):
+    try:
+        s, k, rf, div, vol, T, options_type, N, method = request_body['s'], request_body['k'], request_body['rf'], \
+                                                         request_body['div'], request_body['vol'], request_body['T'], \
+                                                         request_body['options_type'], request_body['N'], request_body[
+                                                             'method']
+        if method == 'BS':
+            pc_flag = 1 if options_type == 'call' else -1
+            result = options.bs(s, k, rf, div, vol, T, pc_flag)
+        elif method == 'Binomial Tree':
+            result = options.binomial_tree(s, k, T, rf, vol, N, options_type == 'call')
+        else:
+            result = 0
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status=0, result=result)
