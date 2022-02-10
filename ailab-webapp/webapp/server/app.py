@@ -19,10 +19,14 @@ from models.Binomial import BinomialTree
 from models.Geske import Geske
 from models.Options import options
 from models.Portfolio.portfolio import Portfolio
-from webapp.server.generic import ResultResponse, ReceiveTag, Data
+from webapp.server.generic import ResultResponse, ReceiveTag, Data, CDSData
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from webapp.config import ANALYTICS_DECIMALS
+from webapp.server.helpers import round_result
+from sqlalchemy import create_engine
+
 
 app = FastAPI()
 
@@ -35,6 +39,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
+mysql_connection_url = "mysql+pymysql://root:Tiger980330!@localhost/cds"
+mysql_connection = create_engine(mysql_connection_url)
 
 
 @app.get('/home/get_top_gainers/{time_range}', tags=['home'])
@@ -61,7 +69,7 @@ def get_top_losers_api(time_range):
 def get_basic_info(data: Data) -> ResultResponse:
     try:
         df = pd.DataFrame(data.data)
-        p = Portfolio(df, weights=data.weights, port_value=data.port_value)
+        p = Portfolio(df, weights=data.weights)
         basic_info = p.basic_info()
         basic_info[''] = basic_info.index
         cols = list(basic_info.columns)
@@ -72,37 +80,20 @@ def get_basic_info(data: Data) -> ResultResponse:
     return ResultResponse(status=0, result=result)
 
 
+@round_result(ANALYTICS_DECIMALS)
+def get_all_var(data, weights, level, decay, n):
+    p = Portfolio(data, weights)
+    result = {'Historical VaR': p.hvar(level),
+              'Parametric VaR': p.pvar(level / 100, alpha=decay),
+              'Monte Carlo VaR': p.monte_carlo_var(level, n)}
+    return result
+
+
 @app.post("/portfolio_analysis/valueatrisk", tags=['portfolio_analysis'])
 def valueatrisk(requestbody: dict) -> ResultResponse:
     try:
-        df = pd.DataFrame(requestbody['data'])
-        if 'weights' in requestbody and requestbody['weights'] is not None:
-            p = Portfolio(df, weights=requestbody['weights'], port_value=requestbody['port_value'])
-        else:
-            p = Portfolio(df, port_value=requestbody['port_value'])
-        method = requestbody['method']
-        if method == 'Historical VaR':
-            if 'level' in requestbody and requestbody['level'] is not None:
-                result = p.hvar(requestbody['level'])
-            else:
-                result = p.hvar()
-        elif method == 'Parametric VaR':
-            if 'level' in requestbody and requestbody['level'] is not None:
-                result = p.pvar(ci=requestbody['level'] / 100, alpha=requestbody['alpha'])
-            else:
-                result = p.pvar(alpha=requestbody['alpha'])
-        else:
-            if 'level' in requestbody and requestbody['level'] is not None:
-                if 'n' in requestbody and requestbody['n'] is not None:
-                    result = p.monte_carlo_var(level=requestbody['level'], n=requestbody['n'])
-                else:
-                    result = p.monte_carlo_var(level=requestbody['level'])
-            else:
-                if 'n' in requestbody and requestbody['n'] is not None:
-                    result = p.monte_carlo_var(n=requestbody['n'])
-                else:
-                    result = p.monte_carlo_var()
-        result = round(result, 4)
+        data, weights, level, decay, n = pd.DataFrame(requestbody['data']), requestbody['weights'], requestbody['level'], requestbody['alpha'], requestbody['n']
+        result = get_all_var(data, weights, level, decay, n)
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status=0, result=result)
@@ -165,7 +156,7 @@ def get_options_data_api(requestBody: dict):
     return ResultResponse(status=0, result=result)
 
 
-@app.post("/options/options_pricing")
+@app.post("/options/options_pricing", tags=['options'])
 def options_pricing_api(request_body:dict):
     try:
         s, k, rf, div, vol, T, options_type, N, method = request_body['s'], request_body['k'], request_body['rf'], \
@@ -179,6 +170,41 @@ def options_pricing_api(request_body:dict):
             result = options.binomial_tree(s, k, T, rf, vol, N, options_type == 'call')
         else:
             result = 0
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status=0, result=result)
+
+
+@app.post("/data/data_warehouse/get_cds_data", tags=['data'])
+def get_cds_data(requestBody: CDSData):
+    try:
+        requestBody = requestBody.dict()
+        region_query = f"""REGION in ({', '.join(f'"{w}"' for w in requestBody['REGION'])}) """ if requestBody['REGION'] and len(requestBody['REGION']) > 0 else ''
+        industry_query = f"""AND INDUSTRY in ({', '.join(f'"{w}"' for w in requestBody['INDUSTRY'])}) """ if requestBody['INDUSTRY'] and len(requestBody['INDUSTRY']) > 0 else ''
+        obligation_assetrank_query = f"""AND OBLIGATION_ASSETRANK in ({', '.join(f'"{w}"' for w in requestBody['OBLIGATION_ASSETRANK'])}) """ if requestBody['OBLIGATION_ASSETRANK'] and len(requestBody['REGION']) > 0 else ''
+        credit_events_query = f"""AND CREDIT_EVENTS in ({', '.join(f'"{w}"' for w in requestBody['CREDIT_EVENTS'])}) """ if requestBody['CREDIT_EVENTS'] and len(requestBody['CREDIT_EVENTS']) > 0 else ''
+        currency_query = f"""AND CURRENCY in ({', '.join(f'"{w}"' for w in requestBody['CURRENCY'])})""" if requestBody['CURRENCY'] and len(requestBody['CURRENCY']) > 0 else ''
+        conditions = region_query + industry_query + obligation_assetrank_query + credit_events_query + currency_query
+        where_clause = 'WHERE ' + conditions if conditions != '' else ''
+        limit = f'limit {requestBody["limit"]}' if requestBody["limit"] else ""
+        query = "SELECT * from cds.CDSData " + where_clause + limit
+        df = pd.read_sql(query, mysql_connection)
+        df.replace({np.nan: None}, inplace=True)
+        result = df.to_json(orient="records")
+
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status=0, result=result)
+
+
+@app.get("/data/data_warehouse/cds_get_unique_val/{param}", tags=['data'])
+def cds_get_unique_val(param: str):
+    try:
+
+        query = f"SELECT DISTINCT {param} from cds.CDSData"
+        df = pd.read_sql(query, mysql_connection)
+        result = list(df[param])
+
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status=0, result=result)

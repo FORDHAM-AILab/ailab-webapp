@@ -35,31 +35,25 @@ class Portfolio:
         self.log_return = self.log_return.dropna(inplace=False)
         self.log_return_cov = covariance_matrix(self.log_return)
         
-        '''
         # weighted log return
-        self.df = self.df.astype(float)
-        self.df = self.df * self.weights
-        self.df['Portfolio'] = self.df.sum(axis=1)
-        '''
-        
+        self.log_return = self.log_return * self.weights
+        self.log_return['Portfolio'] = self.log_return.sum(axis=1)
+
     def basic_info(self):
         basic_info = self.log_return.describe()
         basic_info.loc['Annualized Return'] = basic_info.loc['mean'] * 252
         return basic_info
 
     def sharpe_r(self, rf=0) -> pd.DataFrame:
-        return_pct = calc_returns(self.df, method='pct')
+        return_pct = calc_returns(self.log_return, method='pct')
         sharpe_ratio = (return_pct.mean() - rf) / return_pct.std()
 
         return sharpe_ratio
 
-    def pvar(self, ci=0.95, alpha=None):
-        if alpha is None:
-            return abs(norm.ppf(ci) * np.sqrt(self.log_return['Portfolio'].var()))
-        else:
-            ew = (1 - alpha) ** np.arange(len(self.log_return))[::-1]
-            ew_return = ew * self.log_return['Portfolio']
-            return abs(norm.ppf(ci) * np.sqrt(ew_return.var()))
+    def pvar(self, ci=0.95, alpha=0):
+        ew = (1 - alpha) ** np.arange(len(self.log_return))[::-1]
+        ew_return = ew * self.log_return['Portfolio']
+        return abs(norm.ppf(ci) * np.sqrt(ew_return.var()))
 
     def hvar(self, level=5):
         return abs(np.percentile(self.log_return['Portfolio'], float(level), interpolation="nearest"))

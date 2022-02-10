@@ -6,6 +6,33 @@ from scipy.optimize import root
 from scipy.optimize import brentq
 
 
+class Options:
+    def __init__(self, s, k, rf, div, vol, T, pcFlag):
+        """
+
+        :param s: spot price
+        :param k: strike price
+        :param rf: risk-free rate
+        :param div:
+        :param vol: volatility of the underlying asset
+        :param T: time to maturity
+        :param pcFlag: 1 for call -1 for put
+        """
+        self.s = s
+        self.k = k
+        self.rf = rf
+        self.div = div
+        self.vol = vol
+        self.T = T
+        self.pcFlag = pcFlag
+
+    def d1(self):
+        return (math.log(self.s / self.k) + (self.rf - self.div + self.vol * self.vol / 2) * self.T) \
+               / (self.vol * math.sqrt(self.T))
+
+    def d2(self):
+        return self.d1() - self.vol * math.sqrt(self.T)
+
 def bs(s, k, rf, div, vol, T, pcFlag):
     """
 
