@@ -8,7 +8,7 @@ import scipy.optimize as solver
 
 class Portfolio:
     # read dataframe
-    def __init__(self, df: pd.DataFrame, header: Optional[List[str]] = None, weights: Optional[np.array] = None, given_return: Optional[float] = None):
+    def __init__(self, df: pd.DataFrame, header: Optional[List[str]] = None, weights: Optional[np.array] = None):
 
         # Suppose df is stock price (index is date; columns are tickers)
         if not isinstance(df, pd.DataFrame): 
@@ -35,11 +35,7 @@ class Portfolio:
         self.log_return = calc_returns(self.df, method='log') 
         self.log_return = self.log_return.dropna(inplace=False)
         self.portfolio_return = (self.log_return * self.weights).sum(axis=1)
-        # read given return
-        if given_return is None:
-            self.given_return = (self.log_return.mean()*252).mean()
-        else:
-            self.given_return = given_return
+
 
     # calculate annualized return for each stock
     def basic_info(self):
@@ -85,16 +81,21 @@ class Portfolio:
         max_daily_dd = daily_dd.rolling(window, min_periods=1).min()
         return max_daily_dd
 
-    def optimization(self, method='Markowitz'): # modify method from 'Sharpe' to 'Markowitz'
+    def optimization(self, method='Markowitz', given_return: Optional[float] = None): # modify method from 'Sharpe' to 'Markowitz'
         # calculate annualized return and covariance matrix
         mean = self.log_return.mean()*252
         cov = self.log_return.cov()*252
+        # read given return
+        if given_return is None:
+            given_return = (self.log_return.mean()*252).mean()
+        else:
+            given_return = given_return
 
         if method == 'Markowitz':
             random.seed(8)
             x0 = self.weights
             constraints = [{'type': 'eq', 'fun': lambda x: sum(x) - 1},
-                           {'type': 'eq', 'fun': lambda x: sum(x * mean) - self.given_return}]
+                           {'type': 'eq', 'fun': lambda x: sum(x * mean) - given_return}]
             bounds = tuple((0, 1) for x in range(len(self.log_return.columns)))
 
             def std_weight(weight):
@@ -104,7 +105,7 @@ class Portfolio:
                 return std
 
             outcome = solver.minimize(std_weight, x0=x0, constraints=constraints, bounds=bounds)
-            return outcome
+            return outcome["x"]
 
         elif method == 'Sharpe':
             pass
@@ -115,3 +116,4 @@ if __name__ == '__main__':
     df = pd.read_csv('/Users/xuanmingcui/Downloads/data.csv')
     p = Portfolio(df)
     print(p.pvar(0.05), p.hvar(), p.monte_carlo_var())
+    print(p.optimization())

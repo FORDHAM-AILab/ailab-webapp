@@ -99,6 +99,22 @@ def valueatrisk(requestbody: dict) -> ResultResponse:
     return ResultResponse(status=0, result=result)
 
 
+@round_result(ANALYTICS_DECIMALS)
+def weights_optimization(data, weights, expected_return):
+    p = Portfolio(data, weights=weights)
+    return list(p.optimization(given_return=expected_return))
+
+
+@app.post("/portfolio_analysis/weights_optimization", tags=['portfolio_analysis'])
+def weights_optimization_api(requestbody: dict) -> ResultResponse:
+    try:
+        data, weights, expected_return = pd.DataFrame(requestbody['data']), requestbody['weights'], requestbody['expected_return']
+        result = weights_optimization(data, weights, expected_return)
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status=0, result=result)
+
+
 @app.post("/portfolio_analysis/sharpe_ratio", tags=['portfolio_analysis'])
 def sharpe_ratio(requestbody: dict) -> ResultResponse:
     try:
