@@ -26,7 +26,11 @@ from datetime import datetime
 from webapp.config import ANALYTICS_DECIMALS
 from webapp.server.helpers import round_result
 from sqlalchemy import create_engine
-
+from fastapi.responses import JSONResponse
+from webapp.server.game_utils import User, Homework1, Homework2, Homework3, Game, RanGame, calculateGamePnL, calculateAccumulatedPnl, normalizeDictValues, normalizeMatrixValues
+import json
+from models.Homework.Homework import Homework as Hw_calculator
+from peewee import *
 
 app = FastAPI()
 
@@ -400,6 +404,75 @@ async def create_s3_file(bucket_name: str, key: str):
         return ResultResponse(status='succeed', message=f"Create file to {bucket_name}/{key}",
                               date_done=str(datetime.datetime.utcnow().isoformat()))
 
+"""
+Game api
+"""
+@app.post("/game/current_portfolio", tags=['game'])
+def current_portfolio(self, request:dict, *args, **kwargs):
+    query_result = Game.select(user=request['userId']).order_by('-created_at').values()[0:1]
+    notional = 100000 + calculateAccumulatedPnl(request.user)
+
+    if len(query_result) > 0:
+        return JSONResponse({'success': True, \
+                         'result': {'portfolio': query_result, 'balance': notional}})
+    else:
+        return JSONResponse({'success': True, \
+                         'result': {'portfolio': [], 'balance': notional}})
+
+@app.post("/game/save_portfolio", tags=['game'])
+def save_portfolio(self, request, *args, **kwargs):
+    received_json_data = json.loads(request.body.decode('utf-8'))
+    tickerList = received_json_data['tickerList'] #['AMZN', 'MSFT', 'GOOG']
+    weight = received_json_data['weight'] #[0.5, 0.3, 0.2]
+    Game.create(user=request.user, portfolio_info={'tickerList': tickerList, 'weight': weight})
+
+    return JSONResponse({'success': True})
+
+@app.post("/game/reset", tags=['game'])
+def reset(self, request, *args, **kwargs):
+    targetUsers = User.select().where(User.user.in_(request.data['ids']))
+    RanGame.delete().where(RanGame.user.in_(targetUsers))
+    Game.delete().where(Game.user.in_(targetUsers))
+    return JSONResponse({'success': True})
+
+@app.post("/game/record", tags=['game'])
+def list_past_record(self, request, *args, **kwargs):
+    selected_ran_games = RanGame.select(user=request.user).order_by('-created_at').values()[0:5]
+    return JSONResponse({'success': True, \
+                     'result': selected_ran_games})
+
+@app.post("/game/calculate", tags=['game'])
+def calculate(self, request, *args, **kwargs):
+    received_json_data = json.loads(request.body.decode('utf-8'))
+    tickerList = received_json_data['tickerList'] #['AMZN', 'MSFT', 'GOOG']
+    weight = received_json_data['weight'] #[0.5, 0.3, 0.2]
+    Game.create(user=request.user, portfolio_info={'tickerList': tickerList, 'weight': weight})
+
+    notional = 100000 + calculateAccumulatedPnl(request.user)
+    homework = Hw_calculator()
+    var_result, price_table = homework.Game(tickerList, weight, notional)
+    var_result = normalizeDictValues(var_result, 'Parametric')
+    var_result = normalizeDictValues(var_result, 'Historical')
+    var_result = normalizeDictValues(var_result, 'PCAFactor')
+    
+    '''
+    ran_games = RanGame.objects.filter(user=request.user).order_by('-created_at').values()[0:5]
+    if len(ran_games) == 0:
+        del var_result['PCAFactor']
+    '''
+    return JSONResponse({'success': True, \
+                     'result': var_result})
+
+@app.post("/game/calculate_pnl", tags=['game'])
+def calculate_pnl(self, request, *args, **kwargs):
+
+    sum_of_pnl = calculateAccumulatedPnl(request.user)
+
+    return JSONResponse({'success': True, \
+                     'result': sum_of_pnl})
+
+
 
 if __name__ == '__main__':
-    uvicorn.run('app:app', port=8888, host='127.0.0.1', log_level="info", reload=True)
+    uvicorn.run('app:app', port=8080, host='127.0.0.1', log_level="info", reload=True) # port 8888
+

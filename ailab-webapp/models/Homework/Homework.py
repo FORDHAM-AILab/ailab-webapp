@@ -4,26 +4,36 @@ Created on Thu Sep  6 14:51:13 2018
 
 @author: William Huang
 """
+'''
+import sys
+sys.path.append("./Data")
+sys.path.append("./VaR")
+sys.path.append("./Geske")
+sys.path.append("./Liquidity")
+sys.path.append("./Binomial")
+'''
 
-
-from VaR import ValueAtRisk
-from VaR import HistoricalVaR
-from Liquidity import Liquidity
-from Geske import Geske
-from Data import FinanceData
+from models.VaR.VaR import ValueAtRisk
+from models.VaR.HistoricalVaR import HistoricalVaR
+from models.VaR.PCAVaR import PCAVaR
+from models.Liquidity.Liquidity import Liquidity
+from models.Geske.Geske import Geske
+from models.Data.Data import FinanceData
+from .utils import getPriceTableFromFileCache
 
 import numpy as np
+import pandas as pd
 import math
 import datetime as dt
 from bdateutil import isbday
 from bdateutil import relativedelta
 import holidays
-import pyodbc
 import logging
 
 
+
 class Homework:
-	def __init__(self,approach='Yahoo'):
+	def __init__(self,approach='IEX'):
 		self.dataSource = FinanceData(approach)
 
 	# start date 252, 0.01 default value
@@ -72,7 +82,7 @@ class Homework:
 		GDemo = Geske(rf=rf,steps=steps,vol=vol,ttm=ttm[-1])
 		result = {}
 		result['Asset Price'] = GDemo.getAssetPrice(ttm,Debt,marketCap)
-		result['Default prob'] = GDemo.calculateProb(s0=result['Asset Price'],ttm = ttm,Debt = Debt)
+		result['Default Prob'] = GDemo.calculateProb(s0=result['Asset Price'],ttm = ttm,Debt = Debt)
 		result['Market Cap'] = marketCap
 		return result
 
@@ -83,25 +93,23 @@ class Homework:
 		result = {}
 		vol = self.dataSource.getVol(ticker)
 		marketCap = self.dataSource.getMarketCap(ticker)/1000000000
-		logging.debug(f'{ticker} - MarketCap: {marketCap} Billion')
+		
 		ttm = [t1,t2]
 		Debt = [k1,k2]
 		LiquidA0 = self.Homework2(ticker,ttm,Debt,steps = steps)['Asset Price']
-		logging.debug(f'{ticker} - Liquid Asset Value: {LiquidA0} Billion')
+		
 		temp = math.log((k1+k2)/(LiquidA0-marketCap))
 		adjustFactor = 1-(0.1-temp)*4
-		logging.debug(f'{ticker} - Adjust Factor: {adjustFactor}')
+		
 		try:
 			W = Liquidity.calibrateWealth(adjustFactor,0,0,0.3,1,1,LiquidA0)
-			logging.debug(f'{ticker} - Wealth: {W}')
 			illquidA0 = Liquidity.illquidPrice(W,W*adjustFactor,t1,rf,sharpRatio,0.3)
-			logging.debug(f'{ticker} - Illiquid Asset Value: {illquidA0}')
 			LDemo = Liquidity(k = 1, rf = rf, steps = steps, vol = vol, ttm = t1)
 			LDemo.liquidPrice(s0 = illquidA0,k1= k1,k2 = k2,t1 = t1, t2 = t2,div = div)
 			GDemo = Geske(rf=rf,steps=steps,vol=vol,ttm=t2)
 			illquidE0 = GDemo.geske(illquidA0,ttm,Debt)
 		except:
-			return -1
+			return None
 		result['Illiquid Asset'] = illquidA0
 		result['Liquid Asset'] = LiquidA0
 		result['Illiquid Equity'] = illquidE0
@@ -109,6 +117,80 @@ class Homework:
 		return result
 		
 
+	def Game(self,tickerList,weight,notional,startDate = None,endDate = None,historicalWindow = 252,intervals = [0.995,0.99,0.98,0.975,0.95]):
+		if(startDate == None and endDate == None):
+			today = dt.date.today()
+			# today = today - dt.timedelta(days =1)
+			endDate = today
+			# endDate = dt.datetime.strptime('2019-04-10', '%Y-%m-%d').date()
+			startDate = today + relativedelta(bdays=-historicalWindow,holidays=holidays.US())
+
+		weight = np.array(weight)
+		tickerSeries = pd.Series(tickerList)
+		if True in tickerSeries.duplicated().values:
+			duplicatedItem = tickerSeries[tickerSeries.duplicated().values].values
+			duplicatedItemStr = ' '.join(duplicatedItem)
+			logging.warning(f'Duplicated items in tickerList: {duplicatedItemStr}')
+			updatedWeights = []
+			updatedTickerList = []
+			if(abs(np.sum(weight)-1)<0.0001):
+				for item in tickerSeries.drop_duplicates().values:
+					updatedTickerList.append(item)
+					updatedWeights.append(round(np.sum(weight[tickerSeries.values == item]),4))
+			weight = np.array(updatedWeights)
+			tickerList = updatedTickerList
+
+
+
+		result = {}
+		paraDict = {}
+		hisDict = {}
+		pcaDict = {}
+		priceTabel = getPriceTableFromFileCache(tickerList, startDate, endDate)
+		naCheck = np.all(priceTabel.isna(),axis=0).values
+		if True in naCheck:
+			naTicker = priceTabel.columns[naCheck]
+			raise Exception(f'No data for ticker: {naTicker.values}')
+		if(len(priceTabel) == 0):
+			logging.error('Fail to load the priceTable')
+			raise Exception('Fail to load the priceTable')
+		logging.info(f'Loading priceTable with length:{len(priceTabel)}')
+		# If data is not enough, fetch more data
+		# However, when the stock is new, the data is always not enough then bellowing codes will go into infinity loop
+		while(len(priceTabel) < historicalWindow):
+			previousLength = len(priceTabel)
+			startDate = startDate + relativedelta(-historicalWindow + len(priceTabel),holidays=holidays.US())
+			priceTabel = getPriceTableFromFileCache(tickerList, startDate, endDate)
+			if(len(priceTabel) <= previousLength):
+				logging.warning(f'Cannot fetch more data, current length: {len(priceTabel)}. The window of historical VaR changes from {historicalWindow} to {len(priceTabel)}')
+				historicalWindow = len(priceTabel)
+				break
+		parametric = ValueAtRisk(0.95,priceTabel.as_matrix(),weight)
+		historical = HistoricalVaR(0.95,priceTabel.as_matrix(),weight)
+
+		universeTickerList = pd.read_csv('/university_code/VaR/Data/universeTickerList.csv', names=['ticker'])['ticker'].tolist()
+
+		universePriceTabel = self.dataSource.getPriceTable(universeTickerList,startDate.isoformat(),endDate.isoformat(), \
+            localCheck='/university_code/VaR/Data/universe.csv', update=True)
+		logging.debug(f'{universePriceTabel.index}')
+		universePriceTabel = self.dataSource.dataMatching(universePriceTabel,priceTabel)
+		# universePriceTabel = universePriceTabel.iloc[universePriceTabel.shape[0]-priceTabel.shape[0]:]
+
+		pcafactor = PCAVaR(0.95,priceTabel.as_matrix(),universePriceTabel,weight)
+		pcafactor.getComponents(5)
+		for interval in intervals:
+			parametric.setCI(interval)
+			historical.setCI(interval)
+			pcafactor.setCI(interval)
+			key = interval
+			# the 1 here means daily var
+			paraDict[key] = parametric.var(marketValue=notional,window = 1)
+			hisDict[key] = historical.var(marketValue=notional,window = historicalWindow)
+			pcaDict[key] = pcafactor.var(marketValue=notional)
+		result['Parametric'] = paraDict
+		result['Historical'] = hisDict
+		result['PCAFactor'] = pcaDict
+		return result, priceTabel
 
 '''
 tickerList = ['AMZN', 'MSFT', 'GOOG']
@@ -125,9 +207,9 @@ print('Homework1',demo.Homework1(tickerList,weight,notional))
 ticker = 'AMZN'
 rf = 0.05
 ttm = [1,2]
-debt = [6000,20]
+Debt = [6000,20]
 # marketCap = 80
-print('\nHomework2',demo.Homework2(ticker,ttm,debt))
+print('\nHomework2',demo.Homework2(ticker,ttm,Debt))
 
 k1 = 900
 t1 = 1
@@ -144,7 +226,7 @@ vol = 0.210609
 div = 0
 pcFlag = 1
 ttm = [t1,t2]
-debt = [k1,k2]
+Debt = [k1,k2]
 sharpRatio = 0.23
 print('\nHomework3',demo.Homework3(ticker,t1,t2,k1,k2,rf,div,sharpRatio,steps = 200))
 '''

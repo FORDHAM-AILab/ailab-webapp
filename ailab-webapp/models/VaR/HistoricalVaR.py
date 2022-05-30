@@ -4,7 +4,7 @@ Created on Wed Jul 25 23:35:03 2018
 
 @author: William Huang
 """
-from VaR import ValueAtRisk
+from .VaR import ValueAtRisk
 import numpy as np
 
 
