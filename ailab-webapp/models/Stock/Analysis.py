@@ -61,7 +61,7 @@ class Analysis:
         signal['PPO'] = talib.PPO(close, fastperiod=12, slowperiod=26, matype=0)[-1]
         signal['ROC'] = talib.ROC(close, timeperiod=10)[-1]
         signal['ROCR'] = talib.ROCR(close, timeperiod=10)[-1]
-        slowk, slowd = STOCH(high, low, close, fastk_period=5, slowk_period=3, slowk_matype=0, slowd_period=3,
+        slowk, slowd = talib.STOCH(high, low, close, fastk_period=5, slowk_period=3, slowk_matype=0, slowd_period=3,
                              slowd_matype=0)[-1]
         signal['STOCH_k'] = slowk
         signal['STOCH_d'] = slowd
