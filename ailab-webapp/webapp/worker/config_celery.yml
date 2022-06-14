@@ -1,0 +1,43 @@
+prod:
+#  broker: 'sqs://' # another issue encountered on linux where this needs pycurl and thats not working
+#  broker: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/0'
+  broker: 'amqps://mtgeaws:5cv6Z6!kupas@b-84e8c7f3-953b-45e3-95ee-940cbaf7e7f8.mq.us-east-1.amazonaws.com:5671'
+  backend: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/0'
+  result_expires: 3600
+  task_time_limit: 3600
+  broker_transport_options:
+    queue_name_prefix: 'mtge-'
+  task_serializer: 'json'
+
+staging:
+#  broker: 'sqs://' # another issue encountered on linux where this needs pycurl and thats not working
+#  broker: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/0'
+  broker: 'amqps://mtgeaws:5cv6Z6!kupas@b-84e8c7f3-953b-45e3-95ee-940cbaf7e7f8.mq.us-east-1.amazonaws.com/staging:5671'
+  backend: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/4'
+  result_expires: 3600
+  task_time_limit: 3600
+  broker_transport_options:
+    queue_name_prefix: 'mtgedev-'
+  task_serializer: 'json'
+
+test:
+#  broker: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/0'
+  broker: 'amqps://mtgeaws:5cv6Z6!kupas@b-84e8c7f3-953b-45e3-95ee-940cbaf7e7f8.mq.us-east-1.amazonaws.com/dev:5671'
+  backend: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/0'
+  result_expires: 3600
+  task_time_limit: 3600
+  broker_transport_options:
+    queue_name_prefix: 'rcf-'
+  task_serializer: 'json'
+
+dev:
+  broker: 'redis://localhost/0'   # use localhost if not running as docker
+  # broker='amqp://'
+  backend: 'redis://localhost/1'  # for local testing.. docker run -p 0.0.0.0:6379:6379 redis redis-server
+#  broker: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/2'
+#  backend: 'redis://pmc-redis.cv9u28.0001.use1.cache.amazonaws.com:6379/3'
+  result_expires: 3600
+  task_time_limit: 3600
+  broker_transport_options:
+    queue_name_prefix: 'pmc-rcf-'
+  task_serializer: 'json'
