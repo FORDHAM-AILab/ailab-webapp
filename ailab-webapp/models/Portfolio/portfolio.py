@@ -112,8 +112,9 @@ class Portfolio:
 
 
 if __name__ == '__main__':
-    # df = pd.read_csv('/Users/xuanmingcui/Documents/projects/ailab-webapp/ailab-webapp/models/VaR/Data/portfolio.csv')
-    df = pd.read_csv('/Users/xuanmingcui/Downloads/data.csv')
+    # df = pd.read_csv('/Users/xuanmingcui/Documents/projects/ailab-webapp/ailab-webapp/webapp_models/VaR/Data/portfolio.csv')
+    from webapp.data.stock import get_hist_stock_price
+    df = get_hist_stock_price(['AAPL', 'TSLA'], start_date='2022-01-01', end_date='2022-02-15')
     p = Portfolio(df)
     print(p.pvar(0.05), p.hvar(), p.monte_carlo_var())
     print(p.optimization())

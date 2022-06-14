@@ -4,6 +4,11 @@ import pandas as pd
 import numpy as np
 from functools import wraps
 import copy
+from contextlib import contextmanager
+
+from sqlalchemy.orm import scoped_session
+
+from webapp import mysql_session_factory
 
 
 def round_digit(x, decimal: int = 0):
@@ -90,5 +95,20 @@ def foo():
     return d
 
 
-if __name__ == '__main__':
-    print(foo())
+# ---------------------- SQL Related... ----------------------
+
+def sql_to_dict(result_proxy) -> List[dict]:
+    return [dict(row) for row in result_proxy]
+
+
+@contextmanager
+def mysql_session_scope():
+    session = scoped_session(mysql_session_factory)
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()

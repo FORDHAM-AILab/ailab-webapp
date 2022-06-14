@@ -89,7 +89,7 @@ class Portfolio:
 
 
 if __name__ == '__main__':
-    # df = pd.read_csv('/Users/xuanmingcui/Documents/projects/ailab-webapp/ailab-webapp/models/VaR/Data/portfolio.csv')
+    # df = pd.read_csv('/Users/xuanmingcui/Documents/projects/ailab-webapp/ailab-webapp/webapp_models/VaR/Data/portfolio.csv')
     df = pd.read_csv('/Users/xuanmingcui/Downloads/data.csv')
     p = Portfolio(df)
     print(p.pvar(0.05), p.hvar(), p.monte_carlo_var())
