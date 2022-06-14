@@ -15,11 +15,11 @@ DATABASE_TYPE = RDB
 CACHE_DB_TYPE = REDIS_DB
 
 
-# # MongoDB Replica Set
-# MONGODB_HOST = os.environ.get("MONGODB_HOST", "127.0.0.1")
-# MONGODB_PORT = int(os.environ.get("MONGODB_PORT", 27017))
-# MONGODB_COLLECTION = "testdb"
-# MONGODB_DATABASE = "testdb"
+# MongoDB Replica Set
+MONGODB_HOST = os.environ.get("MONGODB_HOST", "127.0.0.1")
+MONGODB_PORT = int(os.environ.get("MONGODB_PORT", 27017))
+MONGODB_COLLECTION = "testdb"
+MONGODB_DATABASE = "testdb"
 
 # MySQL
 MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL", None)
