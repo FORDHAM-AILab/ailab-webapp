@@ -15,6 +15,15 @@ def get_hist_stock_price(tickers, start_date, end_date):
     return result
 
 
+def get_single_hist_price(ticker, start_date, end_date):
+    result = stock_info.get_data(ticker, start_date=start_date, end_date=end_date)
+    result.drop(columns=['ticker'], inplace=True)
+    result['date'] = result.index
+    result['date'] = result['date'].dt.strftime('%Y-%m-%d')
+    result.reset_index(inplace=True, drop=True)
+    return result
+
+
 def get_analysis_info(ticker:str):
     return stock_info.get_analysts_info(ticker)
 
@@ -31,6 +40,12 @@ def get_top_losers(time_range):
         return stock_info.get_day_losers()
     else:
         pass
+
+
+def get_basic_stats(ticker):
+    df = stock_info.get_stats(ticker)
+    return df.to_json(orient='records')
+
 
 def get_real_time_stock_price(tickers: list):
     return [stock_info.get_live_price(ticker) for ticker in tickers]

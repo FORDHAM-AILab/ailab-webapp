@@ -1,6 +1,10 @@
 # Git
-.git
-.git/
+**/*.git
 
 # Virtual Environment
 venv/*
+
+
+**/*.idea/
+**/__pycache__
+**/*.pyc

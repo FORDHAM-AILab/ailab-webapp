@@ -16,14 +16,12 @@ import math
 
 
 def BSPricer(s, k, rf, div, vol, T, pcFlag):
-    # logging.debug(f'{s},{k}')
     d1 = (math.log(s / k) + (rf - div + vol * vol / 2) * T) / (vol * math.sqrt(T))
     d2 = d1 - vol * math.sqrt(T)
 
     n1 = norm.cdf(d1 * pcFlag, 0, 1)
     n2 = norm.cdf(d2 * pcFlag, 0, 1)
     result = s * math.exp(-div * T) * pcFlag * n1 - k * math.exp(-rf * T) * pcFlag * n2
-    # logging.debug(f'-> {result}')
 
     return result
 

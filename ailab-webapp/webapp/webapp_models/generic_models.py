@@ -32,3 +32,13 @@ class UserActivityLog(BaseModel):
     date: str
     start_time: str
     duration: int
+
+
+class CDSData(BaseModel):
+    REGION: list = None
+    INDUSTRY: list = None
+    OBLIGATION_ASSETRANK: list = None
+    CREDIT_EVENTS: list = None
+    CURRENCY: list = None
+    limit: int = 100
+
