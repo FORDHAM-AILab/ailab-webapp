@@ -611,9 +611,9 @@ async def create_rm_game_user(internal_user: InternalUser):
     current_time = datetime.now(eastern).isoformat()
     with helpers.mysql_session_scope() as session:
         session.execute(
-            f"""INSERT INTO game_rm_account (user_id, net_account_value,market_value,cash_balance, pl,pl_percent,updated_at, created_at, capital_gain) 
+            f"""INSERT INTO game_rm_account (user_id, net_account_value,market_value,cash_balance, pl,pl_percent,updated_at, created_at) 
                 VALUES ('{internal_user.internal_sub_id}',{CONSTS.GAME_RM_NOTIONAL},0,{CONSTS.GAME_RM_NOTIONAL},0,0,'{current_time}',
-                        '{current_time}', 0)""")
+                        '{current_time}')""")
 
     return ResultResponse(status=0, message=f"Create user: {internal_user.username} for RM game",
                           date_done=str(datetime.now(eastern).isoformat()))
@@ -674,7 +674,7 @@ async def update_portfolio(request: dict):
         new_shares[ticker] += n_shares
     new_shares = dict(new_shares)
     # get today's price: TODO: 是否取分钟级数据 instead of 日级数据？ 需要修改yfinance包里的stock_info文件
-    new_prices = get_hist_stock_price(list(new_shares.keys()), current_time, current_time).to_dict(orient='records')[0]
+    new_prices = get_hist_stock_price(list(new_shares.keys()), pd.to_datetime('2022-06-13'), pd.to_datetime('2022-06-14')).to_dict(orient='records')[0]
     # deduct from the current balance
     for ticker, shares in new_transactions.items():
         # insufficient buying power
@@ -709,7 +709,7 @@ async def update_portfolio(request: dict):
     with helpers.mysql_session_scope() as session:
         # update account
         session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
-                                                   , net_account_value = {cash_balance + market_value},
+                                                   , net_account_value = {cash_balance + market_value}
                                                    , market_value = {market_value}
                                                    , cash_balance = {cash_balance}
                                                    , hist_var = {hist_var}
@@ -803,7 +803,6 @@ async def reset_game(internal_user: InternalUser):
         session.execute(f"""DELETE FROM game_rm_account WHERE user_id = '{internal_user.internal_sub_id}'""")
         session.execute(f"""DELETE FROM game_rm_transactions WHERE user_id = '{internal_user.internal_sub_id}'""")
         session.execute(f"""DELETE FROM game_rm_portfolio WHERE user_id = '{internal_user.internal_sub_id}'""")
-
     return ResultResponse(status=0, message=f"Reset user: {internal_user.username} for RM game",
                           date_done=str(datetime.now(eastern).isoformat()))
 
