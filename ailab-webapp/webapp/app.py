@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+import pytz
 import logging
 import uuid
 from collections import defaultdict
@@ -606,20 +607,22 @@ async def create_s3_file(bucket_name: str, key: str):
 @app.post("/game/rm_game/create_rm_game_user", tags=['game'])
 async def create_rm_game_user(internal_user: InternalUser):
     # = Depends(access_token_cookie_scheme)):
-    current_time = datetime.utcnow().isoformat()
+    eastern = pytz.timezone('US/Eastern')
+    current_time = datetime.now(eastern).isoformat()
     with helpers.mysql_session_scope() as session:
         session.execute(
-            f"""INSERT INTO game_rm_account (user_id, balance, updated_at, created_at, capital_gain) 
-                VALUES ('{internal_user.internal_sub_id}', {CONSTS.GAME_RM_NOTIONAL},'{current_time}',
+            f"""INSERT INTO game_rm_account (user_id, net_account_value,market_value,cash_balance, pl,pl_percent,updated_at, created_at, capital_gain) 
+                VALUES ('{internal_user.internal_sub_id}',{CONSTS.GAME_RM_NOTIONAL},0,{CONSTS.GAME_RM_NOTIONAL},0,0,'{current_time}',
                         '{current_time}', 0)""")
 
     return ResultResponse(status=0, message=f"Create user: {internal_user.username} for RM game",
-                          date_done=str(datetime.utcnow().isoformat()))
+                          date_done=str(datetime.now(eastern).isoformat()))
 
 
 @app.post("/game/rm_game/get_account_info", tags=['game'])
 def get_account_info(internal_user: InternalUser):
     # = Depends(access_token_cookie_scheme)):
+    eastern = pytz.timezone('US/Eastern')
     with helpers.mysql_session_scope() as session:
         result = session.execute(
             f"""SELECT * FROM game_rm_account WHERE user_id = '{internal_user.internal_sub_id}' """)
@@ -630,22 +633,21 @@ def get_account_info(internal_user: InternalUser):
 
     return ResultResponse(status=0, result=result[0],
                           message=f"Found user: {internal_user.username}'s current account info",
-                          date_done=str(datetime.utcnow().isoformat()))
+                          date_done=str(datetime.now(eastern).isoformat()))
 
 
 @app.post("/game/rm_game/update_portfolio", tags=['game'])
 async def update_portfolio(request: dict):
-    # request: Request, internal_user: InternalUser = Depends(access_token_cookie_scheme)):
     """
-    TODO: calculate pnl for each specific ticker?
-    :param request: Request object that contains transaction infos, e.g.: {'transaction':{"AAPL":10, "TSLA":4}}
-    :param internal_user:
-    :return:
+        :param request: Request object that contains transaction infos, e.g.: {'transaction':{"AAPL":10, "TSLA":4}}
+        :param internal_user:
+        :return:
     """
+    eastern = pytz.timezone('US/Eastern')
 
     # TODO: remove below line when connected with frontend. This is only for testing:
     internal_user = InternalUser(username='foo', internal_sub_id='111', external_sub_id='222',
-                                 created_at=datetime.utcnow().isoformat(), email='foo@gmail.com')
+                                 created_at=datetime.now(eastern).isoformat(), email='foo@gmail.com')
     with helpers.mysql_session_scope() as session:
         result_current = session.execute(f"""SELECT * FROM game_rm_account WHERE 
                                              user_id = '{internal_user.internal_sub_id}' """)
@@ -655,8 +657,12 @@ async def update_portfolio(request: dict):
 
     new_transaction = request  # TODO: uncomment this for prod: await request.json()
     new_transactions = new_transaction['transactions']  # {'AAPL':5, 'TSLA':10}
-    current_balance = float(result_current[0]['balance'])
-    current_time = datetime.utcnow().isoformat()
+    net_account_value = float(result_current[0]['net_account_value'])
+    market_value = float(result_current[0]['market_value'])
+    cash_balance = float(result_current[0]['cash_balance'])
+    # leverage allowed: cash can lend the same value as itself, stock can lend 0.8 times of its value
+    buying_power = market_value * 0.8 + (cash_balance*2 if cash_balance>0 else cash_balance)
+    current_time = datetime.now(eastern).isoformat()
 
     # if the user is new, i.e. current_shares dict is None, create empty defaultdict
     if result_current[0]['current_shares'] is None:
@@ -667,19 +673,23 @@ async def update_portfolio(request: dict):
     for ticker, n_shares in new_transactions.items():
         new_shares[ticker] += n_shares
     new_shares = dict(new_shares)
-    # get today's price
+    # get today's price: TODO: 是否取分钟级数据 instead of 日级数据？ 需要修改yfinance包里的stock_info文件
     new_prices = get_hist_stock_price(list(new_shares.keys()), current_time, current_time).to_dict(orient='records')[0]
     # deduct from the current balance
     for ticker, shares in new_transactions.items():
-        current_balance -= shares * new_prices[ticker]
-        # insufficient balance
-        if current_balance < 0:
-            raise Exception(f"Insufficient balance for transaction: {'Buy' if shares > 0 else 'Sell'} "
+        # insufficient buying power
+        if buying_power < (shares * new_prices[ticker]): # Leverage allowed
+            raise Exception(f"Insufficient buying power for transaction: {'Buy' if shares > 0 else 'Sell'} "
                             f"{ticker} {abs(shares)} shares")
+        else:
+            cash_balance -= shares * new_prices[ticker]
+
+        # request: Request, internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+
 
     # get the historical price table for one year for VaR
     annual_price = get_hist_stock_price(list(new_shares.keys()),
-                                        datetime.now() - timedelta(days=365), datetime.now())
+                                        datetime.now(eastern) - timedelta(days=365), datetime.now(eastern))
     current_weights = [new_shares[ticker] for ticker in annual_price.columns[:-1]]
     current_weights = [shares / sum(current_weights) for shares in current_weights]
     current_portfolio = Portfolio(df=annual_price, weights=current_weights)
@@ -687,30 +697,71 @@ async def update_portfolio(request: dict):
     p_var = current_portfolio.pvar()
     monte_carlo_var = current_portfolio.monte_carlo_var()
 
-    # get today's account market value
+    # get account market value
     market_value = 0
     for ticker, shares in new_shares.items():
         market_value += new_prices[ticker] * shares
 
+    # update buying_power
+    buying_power = market_value * 0.8 + (cash_balance * 2 if cash_balance > 0 else cash_balance)
+
+    # update account, transaction and portfoliio info
     with helpers.mysql_session_scope() as session:
+        # update account
         session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
-                                                   , balance = {current_balance}
+                                                   , net_account_value = {cash_balance + market_value},
+                                                   , market_value = {market_value}
+                                                   , cash_balance = {cash_balance}
                                                    , hist_var = {hist_var}
                                                    , p_var = {p_var}
                                                    , monte_carlo_var = {monte_carlo_var}
-                                                   , capital_gain = {current_balance + market_value - CONSTS.GAME_RM_NOTIONAL}
+                                                   , pl = {cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}
+                                                   , pl_percent = {round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL)/100,2)}
                                                    , current_shares = '{json.dumps(new_shares)}'
                                                    WHERE user_id = '{internal_user.internal_sub_id}'""")
 
+        # record new trades request
         for ticker, shares in new_transactions.items():
             session.execute(f"""INSERT INTO game_rm_transactions VALUES ('{uuid.uuid4()}', 
-                                '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares}, NULL)""")
+                                '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares})""")
+
+        # calculate pnl for each specific ticker
+        for ticker, shares in new_shares.items():
+            result_portfolio = session.execute(f"""SELECT * FROM game_rm_portfolio WHERE 
+                                                               user_id = '{internal_user.internal_sub_id}' 
+                                                               AND ticker = '{ticker}'""")
+            if result_portfolio.rowcount == 0:
+                session.execute(f"""INSERT INTO game_rm_portfolio VALUES ('{internal_user.internal_sub_id}', 
+                                                '{ticker}',{round(shares * new_prices[ticker], 2)}, {shares}, 0, 0,
+                                                {new_prices[ticker]},{new_prices[ticker]})""")
+            else:
+                result_portfolio = helpers.sql_to_dict(result_portfolio)
+
+                average_price = float(result_portfolio[0]['average_price'])
+                quantity = float(result_portfolio[0]['quantity'])
+
+                new_price = new_prices[ticker]
+                new_market_value = round(shares * new_price, 2)
+                # update average_price
+                average_price = round((average_price * quantity + new_price * new_transactions[ticker])/shares,2)
+
+                open_pl = new_market_value - average_price * shares
+                session.execute(f"""UPDATE game_rm_portfolio SET market_value = {new_market_value}
+                                                                , quantity = {shares}
+                                                                , open_pl = {open_pl}
+                                                                , open_pl_percent = {round(open_pl/100,2)}
+                                                                , last_price = {new_price}
+                                                                , average_price = {average_price}
+                                                                WHERE user_id = '{internal_user.internal_sub_id}'
+                                                                AND ticker = '{ticker}'""")
+
     return ResultResponse(status=0, message=f"Transaction succeed for user: {internal_user.username}",
-                          date_done=str(datetime.utcnow().isoformat()))
+                          date_done=str(datetime.now(eastern).isoformat()))
 
 
 @app.post("/game/rm_game/get_transaction_history", tags=['game'])
 async def get_transaction_history(internal_user: InternalUser):
+    eastern = pytz.timezone('US/Eastern')
     # = Depends(access_token_cookie_scheme)):
     """
     return list of
@@ -724,7 +775,7 @@ async def get_transaction_history(internal_user: InternalUser):
         result = helpers.sql_to_dict(result)
 
     return ResultResponse(status=0, result=result, message=f"Transaction succeed for user: {internal_user.username}",
-                          date_done=str(datetime.utcnow().isoformat()))
+                          date_done=str(datetime.now(eastern).isoformat()))
 
 
 @app.get("/game/rm_game/rank_players_rm/{by}", tags=['game'])
@@ -734,19 +785,28 @@ async def rank_players_rm(by: str = 'balance'):
     :param by:
     :return:
     """
+    eastern = pytz.timezone('US/Eastern')
     with helpers.mysql_session_scope() as session:
         result = session.execute(
-            f"""SELECT username, balance FROM game_rm_transactions LEFT JOIN users 
-                ON game_rm_transactions.user_id = users.internal_sub_id ORDER BY {by} DESC""")
+            f"""SELECT username, net_account_value FROM game_rm_account LEFT JOIN users 
+                ON game_rm_account.user_id = users.internal_sub_id ORDER BY {by} DESC""")
         result = helpers.sql_to_dict(result)
 
-    return ResultResponse(status=0, result={'result':result}, date_done=str(datetime.utcnow().isoformat()))
+    return ResultResponse(status=0, result={'result':result}, date_done=str(datetime.now(eastern).isoformat()))
 
 
 @app.put("/game/rm_game/reset_game", tags=['game'])
-async def reset_game():
-    pass
+async def reset_game(internal_user: InternalUser):
+    eastern = pytz.timezone('US/Eastern')
+    current_time = datetime.now(eastern).isoformat()
+    with helpers.mysql_session_scope() as session:
+        session.execute(f"""DELETE FROM game_rm_account WHERE user_id = '{internal_user.internal_sub_id}'""")
+        session.execute(f"""DELETE FROM game_rm_transactions WHERE user_id = '{internal_user.internal_sub_id}'""")
+        session.execute(f"""DELETE FROM game_rm_portfolio WHERE user_id = '{internal_user.internal_sub_id}'""")
+
+    return ResultResponse(status=0, message=f"Reset user: {internal_user.username} for RM game",
+                          date_done=str(datetime.now(eastern).isoformat()))
 
 
 if __name__ == '__main__':
-    uvicorn.run('app:app', port=8888, host='127.0.0.1', log_level="info", reload=True)
+    uvicorn.run('app:app', port=8088, host='127.0.0.1', log_level="info", reload=True)
