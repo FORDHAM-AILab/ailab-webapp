@@ -47,7 +47,8 @@ app = FastAPI()
 # TODO: cache the current object
 
 HTTP_ORIGIN = ['http://127.0.0.1:8888',
-               'http://localhost:3000']
+               'http://localhost:3000',
+               'http://localhost:8888']
 
 app.add_middleware(
     CORSMiddleware,
@@ -604,8 +605,7 @@ async def create_s3_file(bucket_name: str, key: str):
 
 
 @app.post("/game/rm_game/create_rm_game_user", tags=['game'])
-async def create_rm_game_user(internal_user: InternalUser):
-    # = Depends(access_token_cookie_scheme)):
+async def create_rm_game_user(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
     current_time = datetime.utcnow().isoformat()
     with helpers.mysql_session_scope() as session:
         session.execute(
@@ -617,25 +617,8 @@ async def create_rm_game_user(internal_user: InternalUser):
                           date_done=str(datetime.utcnow().isoformat()))
 
 
-@app.post("/game/rm_game/get_account_info", tags=['game'])
-def get_account_info(internal_user: InternalUser):
-    # = Depends(access_token_cookie_scheme)):
-    with helpers.mysql_session_scope() as session:
-        result = session.execute(
-            f"""SELECT * FROM game_rm_account WHERE user_id = '{internal_user.internal_sub_id}' """)
-        result = helpers.sql_to_dict(result)
-
-    if len(result) == 0:
-        raise Exception(f'User: {internal_user.username} not registered for the game')
-
-    return ResultResponse(status=0, result=result[0],
-                          message=f"Found user: {internal_user.username}'s current account info",
-                          date_done=str(datetime.utcnow().isoformat()))
-
-
 @app.post("/game/rm_game/update_portfolio", tags=['game'])
-async def update_portfolio(request: dict):
-    # request: Request, internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+async def update_portfolio(request: Request, internal_user: InternalUser = Depends(access_token_cookie_scheme)):
     """
     TODO: calculate pnl for each specific ticker?
     :param request: Request object that contains transaction infos, e.g.: {'transaction':{"AAPL":10, "TSLA":4}}
@@ -644,8 +627,8 @@ async def update_portfolio(request: dict):
     """
 
     # TODO: remove below line when connected with frontend. This is only for testing:
-    internal_user = InternalUser(username='foo', internal_sub_id='111', external_sub_id='222',
-                                 created_at=datetime.utcnow().isoformat(), email='foo@gmail.com')
+    # internal_user = InternalUser(username='foo', internal_sub_id='111', external_sub_id='222',
+    #                              created_at=datetime.utcnow().isoformat(), email='foo@gmail.com')
     with helpers.mysql_session_scope() as session:
         result_current = session.execute(f"""SELECT * FROM game_rm_account WHERE 
                                              user_id = '{internal_user.internal_sub_id}' """)
@@ -653,7 +636,7 @@ async def update_portfolio(request: dict):
             raise Exception(f'User: {internal_user.username} not registered for the game')
         result_current = helpers.sql_to_dict(result_current)
 
-    new_transaction = request  # TODO: uncomment this for prod: await request.json()
+    new_transaction = await request.json()
     new_transactions = new_transaction['transactions']  # {'AAPL':5, 'TSLA':10}
     current_balance = float(result_current[0]['balance'])
     current_time = datetime.utcnow().isoformat()
@@ -710,8 +693,7 @@ async def update_portfolio(request: dict):
 
 
 @app.post("/game/rm_game/get_transaction_history", tags=['game'])
-async def get_transaction_history(internal_user: InternalUser):
-    # = Depends(access_token_cookie_scheme)):
+async def get_transaction_history(interal_user: InternalUser = Depends(access_token_cookie_scheme)):
     """
     return list of
     :param internal_user: InternalUser class
@@ -719,11 +701,11 @@ async def get_transaction_history(internal_user: InternalUser):
     """
     with helpers.mysql_session_scope() as session:
         result = session.execute(
-            f"""SELECT * FROM game_rm_transactions WHERE user_id = '{internal_user.internal_sub_id}' 
+            f"""SELECT transaction_id, ticker, shares, transaction_time FROM game_rm_transactions WHERE user_id = '{interal_user.internal_sub_id}' 
                 ORDER BY transaction_time DESC""")
         result = helpers.sql_to_dict(result)
 
-    return ResultResponse(status=0, result=result, message=f"Transaction succeed for user: {internal_user.username}",
+    return ResultResponse(status=0, result=result, message=f"Transaction succeed for user: {interal_user.internal_sub_id}",
                           date_done=str(datetime.utcnow().isoformat()))
 
 
@@ -736,16 +718,29 @@ async def rank_players_rm(by: str = 'balance'):
     """
     with helpers.mysql_session_scope() as session:
         result = session.execute(
-            f"""SELECT username, balance FROM game_rm_transactions LEFT JOIN users 
-                ON game_rm_transactions.user_id = users.internal_sub_id ORDER BY {by} DESC""")
+            f"""SELECT username, balance FROM game_rm_account LEFT JOIN users 
+                ON game_rm_account.user_id = users.internal_sub_id ORDER BY {by} DESC""")
         result = helpers.sql_to_dict(result)
 
-    return ResultResponse(status=0, result={'result':result}, date_done=str(datetime.utcnow().isoformat()))
+    return ResultResponse(status=0, result=result, date_done=str(datetime.utcnow().isoformat()))
 
 
 @app.put("/game/rm_game/reset_game", tags=['game'])
 async def reset_game():
     pass
+
+
+@app.post("/game/rm_game/get_user_account_info", tags=['game'])
+async def get_user_account_info(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    with helpers.mysql_session_scope() as session:
+        result = session.execute(
+            f"""SELECT * from game_rm_account WHERE user_id = "{internal_user.internal_sub_id}" """)
+        result = helpers.sql_to_dict(result)
+
+    if len(result) == 0:
+        raise Exception(f"User not registered with RM Game id: {internal_user.internal_sub_id}")
+
+    return ResultResponse(status=0, result=result[0], date_done=str(datetime.utcnow().isoformat()))
 
 
 if __name__ == '__main__':
