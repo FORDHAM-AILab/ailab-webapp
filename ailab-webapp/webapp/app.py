@@ -674,7 +674,7 @@ async def update_portfolio(request: dict):
         new_shares[ticker] += n_shares
     new_shares = dict(new_shares)
     # get today's price: TODO: 是否取分钟级数据 instead of 日级数据？ 需要修改yfinance包里的stock_info文件
-    new_prices = get_hist_stock_price(list(new_shares.keys()), pd.to_datetime('2022-06-13'), pd.to_datetime('2022-06-14')).to_dict(orient='records')[0]
+    new_prices = get_hist_stock_price(list(new_shares.keys()), current_time, current_time).to_dict(orient='records')[0]
     # deduct from the current balance
     for ticker, shares in new_transactions.items():
         # insufficient buying power
@@ -743,7 +743,7 @@ async def update_portfolio(request: dict):
                 new_price = new_prices[ticker]
                 new_market_value = round(shares * new_price, 2)
                 # update average_price
-                average_price = round((average_price * quantity + new_price * new_transactions[ticker])/shares,2)
+                average_price = round((average_price * quantity + new_price * (new_shares[ticker]-quantity))/shares,2)
 
                 open_pl = new_market_value - average_price * shares
                 session.execute(f"""UPDATE game_rm_portfolio SET market_value = {new_market_value}
@@ -808,4 +808,4 @@ async def reset_game(internal_user: InternalUser):
 
 
 if __name__ == '__main__':
-    uvicorn.run('app:app', port=8088, host='127.0.0.1', log_level="info", reload=True)
+    uvicorn.run('app:app', port=8888, host='127.0.0.1', log_level="info", reload=True)
