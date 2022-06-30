@@ -100,7 +100,7 @@ def checkMarketTime(now = None):
     import datetime, pytz
     import pandas_market_calendars as mcal
 
-    tz = pytz.timezone('US/New_York')
+    tz = pytz.timezone('US/Eastern')
     if not now:
         now = datetime.datetime.now(tz)
     nyse = mcal.get_calendar('NYSE')

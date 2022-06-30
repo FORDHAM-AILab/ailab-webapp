@@ -639,7 +639,7 @@ def get_account_info(internal_user: InternalUser):
 @app.post("/game/rm_game/update_portfolio", tags=['game'])
 async def update_portfolio(request: dict):
     """
-        :param request: Request object that contains transaction infos, e.g.: {'transaction':{"AAPL":10, "TSLA":4}}
+        :param request: Request object that contains transaction infos, e.g.: {"transactions":{"AAPL":10, "TSLA":4}}
         :param internal_user:
         :return:
     """
@@ -756,7 +756,10 @@ async def update_portfolio(request: dict):
                                                                     , average_price = {average_price}
                                                                     WHERE user_id = '{internal_user.internal_sub_id}'
                                                                     AND ticker = '{ticker}'""")
-    if not helpers.checkMarketTime():
+
+    # ---------------------Market is close-----------------------#
+    elif not helpers.checkMarketTime():
+        print('Market is close')
         pass
     return ResultResponse(status=0, message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(eastern).isoformat()))
