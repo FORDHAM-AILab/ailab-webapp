@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np
 from yahoo_fin import stock_info
 from typing import List
-
+import yfinance
 
 def get_hist_stock_price(tickers, start_date, end_date):
     result = pd.DataFrame(columns=tickers)
     for ticker in tickers:
-        result[ticker] = stock_info.get_data(ticker, start_date=start_date, end_date=end_date)['adjclose']
+        result[ticker] = yfinance.download(ticker, period='3m',interval='1m')['Adj Close'].tail(1)
 
     result['date'] = result.index
     result['date'] = result['date'].dt.strftime('%Y-%m-%d')

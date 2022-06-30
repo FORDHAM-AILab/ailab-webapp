@@ -673,7 +673,7 @@ async def update_portfolio(request: dict):
     for ticker, n_shares in new_transactions.items():
         new_shares[ticker] += n_shares
     new_shares = dict(new_shares)
-    # get today's price: TODO: 是否取分钟级数据 instead of 日级数据？ 需要修改yfinance包里的stock_info文件
+    # get today's price:
     new_prices = get_hist_stock_price(list(new_shares.keys()), current_time, current_time).to_dict(orient='records')[0]
     # deduct from the current balance
     for ticker, shares in new_transactions.items():
@@ -723,7 +723,7 @@ async def update_portfolio(request: dict):
         # record new trades request
         for ticker, shares in new_transactions.items():
             session.execute(f"""INSERT INTO game_rm_transactions VALUES ('{uuid.uuid4()}', 
-                                '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares})""")
+                                '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares},'completed')""")
 
         # calculate pnl for each specific ticker
         for ticker, shares in new_shares.items():
