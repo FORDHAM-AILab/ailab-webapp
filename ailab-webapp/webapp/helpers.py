@@ -94,6 +94,27 @@ def foo():
 
     return d
 
+# ------------------- Check market time ----------------------
+
+def checkMarketTime(now = None):
+    import datetime, pytz
+    import pandas_market_calendars as mcal
+
+    tz = pytz.timezone('US/New_York')
+    if not now:
+        now = datetime.datetime.now(tz)
+    nyse = mcal.get_calendar('NYSE')
+    market_days = nyse.valid_days(start_date=now, end_date=now,tz=tz)
+    openTime = datetime.time(hour = 9, minute = 30, second = 0)
+    closeTime = datetime.time(hour = 16, minute = 0, second = 0)
+    # If not market day
+    if now.strftime('%Y-%m-%d') not in market_days:
+        return False
+    # If before 09:30 or after 16:00 (not include pre-market and after-market)
+    if (now.time() < openTime) or (now.time() > closeTime):
+        return False
+
+    return True
 
 # ---------------------- SQL Related... ----------------------
 

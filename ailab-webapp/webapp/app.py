@@ -682,79 +682,82 @@ async def update_portfolio(request: dict):
             raise Exception(f"Insufficient buying power for transaction: {'Buy' if shares > 0 else 'Sell'} "
                             f"{ticker} {abs(shares)} shares")
         else:
-            cash_balance -= shares * new_prices[ticker]
+            if helpers.checkMarketTime():
+                cash_balance -= shares * new_prices[ticker]
 
         # request: Request, internal_user: InternalUser = Depends(access_token_cookie_scheme)):
 
+    #---------------------Market is open-----------------------#
+    if helpers.checkMarketTime():
+        # get the historical price table for one year for VaR
+        annual_price = get_hist_stock_price(list(new_shares.keys()),
+                                            datetime.now(eastern) - timedelta(days=365), datetime.now(eastern))
+        current_weights = [new_shares[ticker] for ticker in annual_price.columns[:-1]]
+        current_weights = [shares / sum(current_weights) for shares in current_weights]
+        current_portfolio = Portfolio(df=annual_price, weights=current_weights)
+        hist_var = current_portfolio.hvar()
+        p_var = current_portfolio.pvar()
+        monte_carlo_var = current_portfolio.monte_carlo_var()
 
-    # get the historical price table for one year for VaR
-    annual_price = get_hist_stock_price(list(new_shares.keys()),
-                                        datetime.now(eastern) - timedelta(days=365), datetime.now(eastern))
-    current_weights = [new_shares[ticker] for ticker in annual_price.columns[:-1]]
-    current_weights = [shares / sum(current_weights) for shares in current_weights]
-    current_portfolio = Portfolio(df=annual_price, weights=current_weights)
-    hist_var = current_portfolio.hvar()
-    p_var = current_portfolio.pvar()
-    monte_carlo_var = current_portfolio.monte_carlo_var()
-
-    # get account market value
-    market_value = 0
-    for ticker, shares in new_shares.items():
-        market_value += new_prices[ticker] * shares
-
-    # update buying_power
-    buying_power = market_value * 0.8 + (cash_balance * 2 if cash_balance > 0 else cash_balance)
-
-    # update account, transaction and portfoliio info
-    with helpers.mysql_session_scope() as session:
-        # update account
-        session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
-                                                   , net_account_value = {cash_balance + market_value}
-                                                   , market_value = {market_value}
-                                                   , cash_balance = {cash_balance}
-                                                   , hist_var = {hist_var}
-                                                   , p_var = {p_var}
-                                                   , monte_carlo_var = {monte_carlo_var}
-                                                   , pl = {cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}
-                                                   , pl_percent = {round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL)/100,2)}
-                                                   , current_shares = '{json.dumps(new_shares)}'
-                                                   WHERE user_id = '{internal_user.internal_sub_id}'""")
-
-        # record new trades request
-        for ticker, shares in new_transactions.items():
-            session.execute(f"""INSERT INTO game_rm_transactions VALUES ('{uuid.uuid4()}', 
-                                '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares},'completed')""")
-
-        # calculate pnl for each specific ticker
+        # get account market value
+        market_value = 0
         for ticker, shares in new_shares.items():
-            result_portfolio = session.execute(f"""SELECT * FROM game_rm_portfolio WHERE 
-                                                               user_id = '{internal_user.internal_sub_id}' 
-                                                               AND ticker = '{ticker}'""")
-            if result_portfolio.rowcount == 0:
-                session.execute(f"""INSERT INTO game_rm_portfolio VALUES ('{internal_user.internal_sub_id}', 
-                                                '{ticker}',{round(shares * new_prices[ticker], 2)}, {shares}, 0, 0,
-                                                {new_prices[ticker]},{new_prices[ticker]})""")
-            else:
-                result_portfolio = helpers.sql_to_dict(result_portfolio)
+            market_value += new_prices[ticker] * shares
 
-                average_price = float(result_portfolio[0]['average_price'])
-                quantity = float(result_portfolio[0]['quantity'])
+        # update buying_power
+        buying_power = market_value * 0.8 + (cash_balance * 2 if cash_balance > 0 else cash_balance)
 
-                new_price = new_prices[ticker]
-                new_market_value = round(shares * new_price, 2)
-                # update average_price
-                average_price = round((average_price * quantity + new_price * (new_shares[ticker]-quantity))/shares,2)
+        # update account, transaction and portfoliio info
+        with helpers.mysql_session_scope() as session:
+            # update account
+            session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
+                                                       , net_account_value = {cash_balance + market_value}
+                                                       , market_value = {market_value}
+                                                       , cash_balance = {cash_balance}
+                                                       , hist_var = {hist_var}
+                                                       , p_var = {p_var}
+                                                       , monte_carlo_var = {monte_carlo_var}
+                                                       , pl = {cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}
+                                                       , pl_percent = {round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL)/100,2)}
+                                                       , current_shares = '{json.dumps(new_shares)}'
+                                                       WHERE user_id = '{internal_user.internal_sub_id}'""")
 
-                open_pl = new_market_value - average_price * shares
-                session.execute(f"""UPDATE game_rm_portfolio SET market_value = {new_market_value}
-                                                                , quantity = {shares}
-                                                                , open_pl = {open_pl}
-                                                                , open_pl_percent = {round(open_pl/100,2)}
-                                                                , last_price = {new_price}
-                                                                , average_price = {average_price}
-                                                                WHERE user_id = '{internal_user.internal_sub_id}'
-                                                                AND ticker = '{ticker}'""")
+            # record new trades request
+            for ticker, shares in new_transactions.items():
+                session.execute(f"""INSERT INTO game_rm_transactions VALUES ('{uuid.uuid4()}', 
+                                    '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares},'completed')""")
 
+            # calculate pnl for each specific ticker
+            for ticker, shares in new_shares.items():
+                result_portfolio = session.execute(f"""SELECT * FROM game_rm_portfolio WHERE 
+                                                                   user_id = '{internal_user.internal_sub_id}' 
+                                                                   AND ticker = '{ticker}'""")
+                if result_portfolio.rowcount == 0:
+                    session.execute(f"""INSERT INTO game_rm_portfolio VALUES ('{internal_user.internal_sub_id}', 
+                                                    '{ticker}',{round(shares * new_prices[ticker], 2)}, {shares}, 0, 0,
+                                                    {new_prices[ticker]},{new_prices[ticker]})""")
+                else:
+                    result_portfolio = helpers.sql_to_dict(result_portfolio)
+
+                    average_price = float(result_portfolio[0]['average_price'])
+                    quantity = float(result_portfolio[0]['quantity'])
+
+                    new_price = new_prices[ticker]
+                    new_market_value = round(shares * new_price, 2)
+                    # update average_price
+                    average_price = round((average_price * quantity + new_price * (new_shares[ticker]-quantity))/shares,2)
+
+                    open_pl = new_market_value - average_price * shares
+                    session.execute(f"""UPDATE game_rm_portfolio SET market_value = {new_market_value}
+                                                                    , quantity = {shares}
+                                                                    , open_pl = {open_pl}
+                                                                    , open_pl_percent = {round(open_pl/100,2)}
+                                                                    , last_price = {new_price}
+                                                                    , average_price = {average_price}
+                                                                    WHERE user_id = '{internal_user.internal_sub_id}'
+                                                                    AND ticker = '{ticker}'""")
+    if not helpers.checkMarketTime():
+        pass
     return ResultResponse(status=0, message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(eastern).isoformat()))
 
