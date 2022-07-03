@@ -188,7 +188,6 @@ async def get_transaction_history(internal_user: InternalUser = Depends(access_t
         result = helpers.sql_to_dict(result)
         result_to_return = []
         for row in result:
-            print(row)
             new_row = {'Ticker': row['ticker'],
                        'Quantity': row['shares'],
                        'Price': row['price'],
