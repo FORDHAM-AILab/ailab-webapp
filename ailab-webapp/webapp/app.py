@@ -1,12 +1,9 @@
-from webapp.auth.db_authclients import get_db_client
 from starlette.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, File, UploadFile, Query, Depends
+from fastapi import FastAPI
 import uvicorn
 from fastapi import Request
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse, JSONResponse
-from webapp.auth import providers as auth_providers, schemes as auth_schemes, util as auth_util
-from webapp import config
+from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
 
 
@@ -36,13 +33,6 @@ app.add_middleware(
 )
 
 app.add_middleware(SessionMiddleware, secret_key='!secret')
-
-csrf_token_redirect_cookie_scheme = auth_schemes.CSRFTokenRedirectCookieBearer()
-auth_token_scheme = auth_schemes.AuthTokenBearer()
-access_token_cookie_scheme = auth_schemes.AccessTokenCookieBearer()
-
-# Initialize db client
-mysqldb_client = get_db_client(config.DATABASE_TYPE)
 
 
 @app.middleware("http")
