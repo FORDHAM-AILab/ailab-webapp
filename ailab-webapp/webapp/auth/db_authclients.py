@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import datetime
 import hashlib
 import logging
+from functools import lru_cache
 from typing import List, Optional
 from uuid import uuid4
 
@@ -32,6 +33,7 @@ from webapp.webapp_models.auth_models import (
 logger = logging.getLogger(__name__)
 
 
+@lru_cache()
 def get_db_client(db_type):
     """
     Works out the correct database client based on

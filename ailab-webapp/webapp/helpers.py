@@ -1,3 +1,6 @@
+import traceback
+from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional, Union
 
 import pandas as pd
@@ -7,16 +10,54 @@ import copy
 from contextlib import contextmanager
 
 from sqlalchemy.orm import scoped_session
+from . import mysql_session_factory, CONSTS
+from .CONSTS import TIME_ZONE
+from .webapp_models.generic_models import ResultResponse
 
-from webapp import mysql_session_factory
+
+def standard_response(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        try:
+            rst = function(*args, **kwargs)
+        except Exception as e:
+            return ResultResponse(status='-1', message=f"An exception occurred: {str(e)}",
+                                  debug=traceback.format_exc(),
+                                  date_done=str(datetime.now(TIME_ZONE).isoformat()))
+        else:
+            return ResultResponse(status='0', message="Succeed", result=rst,
+                                  date_done=str(datetime.now(TIME_ZONE).isoformat()))
+
+    return wrapper
+
+
+def format_currency(num: Optional[Union[int, float]]):
+    return None if num is None or np.isnan(num) or np.isinf(num) else f'${num:,}'
+
+
+def format_pct(num: Optional[Union[int, float]], decimal=CONSTS.PRICE_DECIMAL):
+    return None if num is None or np.isnan(num) or np.isinf(num) else f"%.{decimal}f%%" % num
+
+
+def format_digit(num: float, suffix: List[str] = 'K'):
+    """
+    Helper function, replace 0s with K, M, B etc.
+    """
+    magnitude = 0
+    while abs(num) >= 1000:
+        magnitude += 1
+        num /= 1000.0
+    # add more suffixes if you need them
+    return '%.2f%s' % (num, suffix[magnitude])
 
 
 def round_digit(x, decimal: int = 0):
-    return x if (isinstance(x, (str, int)) or (x is None)) \
+    return x if (isinstance(x, (str, int, datetime)) or (x is None)) \
+        else round(float(x), decimal) if isinstance(x, Decimal) \
         else None if (np.isnan(x) or np.isinf(x)) \
         else int(round(x) + 0) if isinstance(x, float) and decimal == 0 \
         else round(x, decimal) if isinstance(x, float) and decimal != 0 \
-        else None
+        else x
 
 
 def round_nested_dict_list(x, decimal: int):
@@ -50,13 +91,12 @@ def round_nested_dict_list(x, decimal: int):
 def round_result(decimal: int = 4):
     """
     Wrapper function to replace nan/inf with None and round to {DETAIL_DECIMAL_PLACE} decimal points
-    Accept float,dict,list and st
+    Accept float,dict,list and str
     """
 
     def wrapper_outer(func):
         @wraps(func)
         def round_wrapper(*args, **kwargs):
-
             result = func(*args, **kwargs)
             if isinstance(result, float):
                 return round_digit(result, decimal)
@@ -81,18 +121,6 @@ def round_pct(l: List[float], decimal: int) -> List[float]:
     round_df = pd.DataFrame({'origin': round_list})
     round_df['cumsum'] = round_df['origin'].cumsum(axis=0).round(decimal).diff()
     return [round(i, decimal) for i in list(round_df['cumsum'])[1:]]
-
-
-# test
-@round_result(3)
-def foo():
-    d = {'A': {'B': 1.222, 'C': 3.333}, 'D': 2.444,
-         'E': [1.111, 2.222,
-               {'FF':
-                    [1.111, 53.11,
-                     {'GDF': [12414.222, 334.22]}]}]}
-
-    return d
 
 
 # ---------------------- SQL Related... ----------------------
