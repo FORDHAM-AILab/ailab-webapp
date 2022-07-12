@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from typing import List
+from typing import List, Union
 
 from fastapi import APIRouter, Depends
 from fastapi.requests import Request
@@ -130,7 +130,7 @@ async def update_portfolio(request: Request,
                 # record new trades request
                 for ticker, shares in new_transactions.items():
                     session.execute(f"""INSERT INTO game_rm_transactions VALUES ('{uuid.uuid4()}', 
-                                        '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares},'completed')""")
+                                        '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares}, {new_prices[ticker]}, 'COMPLETED')""")
 
                 # calculate pnl for each specific ticker
                 for ticker, shares in new_shares.items():
@@ -228,20 +228,24 @@ async def reset_game(internal_user: InternalUser):
 
 
 @round_result(CONSTS.PRICE_DECIMAL)
-def _get_user_account_info(internal_user: InternalUser) -> dict:
+def _get_user_account_info(internal_user: InternalUser) -> Union[dict, int]:
     with helpers.mysql_session_scope() as session:
         result = session.execute(
             f"""SELECT * from game_rm_account WHERE user_id = "{internal_user.internal_sub_id}" """)
         result = helpers.sql_to_dict(result)
 
     if len(result) == 0:
-        raise Exception(f'User: {internal_user.username} not registered for the game')
+        return -1
     return result[0]
 
 
 @router.get("/rm_game/get_user_account_info")
 async def get_user_account_info(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
     result = _get_user_account_info(internal_user)
+    if result == -1:
+        return ResultResponse(status=-2, result=result,
+                              message=f"User hasn't joined the game",
+                              date_done=str(datetime.now(TIME_ZONE).isoformat()))
     return_result = {'net_account_value': format_currency(float(result['net_account_value'])),
                      'market_value': format_currency(float(result['market_value'])),
                      'cash_balance': format_currency(float(result['cash_balance'])),
