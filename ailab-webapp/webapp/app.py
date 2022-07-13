@@ -1,3 +1,8 @@
+import os
+import sys
+sys.path.append(os.getcwd())
+
+
 from starlette.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 import uvicorn
@@ -5,7 +10,6 @@ from fastapi import Request
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
-
 
 app = FastAPI()
 

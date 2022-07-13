@@ -1,9 +1,6 @@
-from typing import Optional
-
 from fastapi.security.utils import get_authorization_scheme_param
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Request
-
 from webapp.exceptions import (
 	UnauthorizedUser,
 	exception_handling,
