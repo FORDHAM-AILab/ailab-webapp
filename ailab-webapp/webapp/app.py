@@ -77,5 +77,10 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+@app.get("/app")
+def test():
+    return {'detail': 'suceed!!!'}
+
+
 if __name__ == '__main__':
     uvicorn.run('app:app', port=8888, host='127.0.0.1', log_level="info", reload=True)

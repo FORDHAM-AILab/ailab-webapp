@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from sqlalchemy import create_engine
 
 from .. import config
-from ..data.stock import get_top_gainers, get_top_losers
+from ..data.stock import get_top_gainers, get_top_losers, get_hist_stock_price
 from ..webapp_models.generic_models import ResultResponse, CDSData
 import numpy as np
 import pandas as pd
@@ -32,6 +32,12 @@ def get_top_losers_api(time_range):
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status=0, result=result)
+
+
+@router.get("/load_hist_stock_price/{start_date}/{end_date}")
+async def load_hist_stock_price(start_date, end_date, q: List[str] = Query(None)):
+    stock_price = get_hist_stock_price(tickers=q, start_date=start_date, end_date=end_date)
+    return {i: stock_price[i].to_list() for i in stock_price.columns}
 
 
 @router.post("/data_warehouse/get_cds_data")
