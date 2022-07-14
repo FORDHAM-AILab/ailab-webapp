@@ -12,15 +12,6 @@ router = APIRouter(
 )
 
 
-@router.get("/load_single_hist_stock_price/{ticker}/{start_date}/{end_date}")
-async def load_full_hist_stock_price(ticker, start_date, end_date):
-    try:
-        result = get_single_hist_price(ticker, start_date, end_date)
-        result = result.to_json(orient='records')
-    except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
-
 
 @router.get("/get_analysis_info/{ticker}")
 async def get_analysis_info_api(ticker):

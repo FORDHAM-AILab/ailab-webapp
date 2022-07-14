@@ -16,7 +16,7 @@ router = APIRouter(
 )
 
 
-@router.get('/get_top_gainers/{time_range}')
+@router.get('/stock/get_top_gainers/{time_range}')
 def get_top_gainers_api(time_range):
     try:
         df = get_top_gainers(time_range)[['Symbol', 'Name', 'Price (Intraday)', '% Change']]
@@ -26,7 +26,7 @@ def get_top_gainers_api(time_range):
     return ResultResponse(status=0, result=result)
 
 
-@router.get('/get_top_losers/{time_range}')
+@router.get('/stock/get_top_losers/{time_range}')
 def get_top_losers_api(time_range):
     try:
         df = get_top_losers(time_range)[['Symbol', 'Name', 'Price (Intraday)', '% Change']]
