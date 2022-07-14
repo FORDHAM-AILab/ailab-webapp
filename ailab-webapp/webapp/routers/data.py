@@ -42,7 +42,7 @@ async def load_hist_stock_price(start_date, end_date, q: List[str] = Query(None)
     return {i: stock_price[i].to_list() for i in stock_price.columns}
 
 
-@app.get("/data/load_single_hist_stock_price/{ticker}/{start_date}/{end_date}", tags=['data'])
+@router.get("/data/load_single_hist_stock_price/{ticker}/{start_date}/{end_date}", tags=['data'])
 def load_full_hist_stock_price(ticker, start_date, end_date):
     try:
         result = get_single_hist_price(ticker, start_date, end_date)
