@@ -16,7 +16,7 @@ router = APIRouter(
 )
 
 
-@router.get('/stock/get_top_gainers/{time_range}')
+@router.get('/get_top_gainers/{time_range}')
 def get_top_gainers_api(time_range):
     try:
         df = get_top_gainers(time_range)[['Symbol', 'Name', 'Price (Intraday)', '% Change']]
@@ -26,7 +26,7 @@ def get_top_gainers_api(time_range):
     return ResultResponse(status=0, result=result)
 
 
-@router.get('/stock/get_top_losers/{time_range}')
+@router.get('/get_top_losers/{time_range}')
 def get_top_losers_api(time_range):
     try:
         df = get_top_losers(time_range)[['Symbol', 'Name', 'Price (Intraday)', '% Change']]
@@ -42,7 +42,7 @@ async def load_hist_stock_price(start_date, end_date, q: List[str] = Query(None)
     return {i: stock_price[i].to_list() for i in stock_price.columns}
 
 
-@router.get("/data/load_single_hist_stock_price/{ticker}/{start_date}/{end_date}", tags=['data'])
+@router.get("/load_single_hist_stock_price/{ticker}/{start_date}/{end_date}")
 def load_full_hist_stock_price(ticker, start_date, end_date):
     try:
         result = get_single_hist_price(ticker, start_date, end_date)
