@@ -10,3 +10,4 @@ venv/*
 **/*.pyc
 
 **/.DS_Store
+**/*.log

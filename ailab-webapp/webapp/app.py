@@ -28,7 +28,7 @@ app.include_router(users.router)
 # TODO: cache the current object
 
 log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.conf')
-logging.config.fileConfig(log_file_path, disable_existing_loggers=False)
+logging.config.fileConfig(log_file_path, disable_existing_loggers=False, )
 logger = logging.getLogger(__name__)
 
 HTTP_ORIGIN = ['http://127.0.0.1:8888',
