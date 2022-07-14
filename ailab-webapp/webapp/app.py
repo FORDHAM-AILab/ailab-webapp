@@ -1,8 +1,11 @@
 import os
 import sys
+import uuid
+from datetime import datetime
+
 sys.path.append(os.getcwd())
 
-
+import logging
 from starlette.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 import uvicorn
@@ -23,6 +26,10 @@ app.include_router(stock.router)
 app.include_router(users.router)
 
 # TODO: cache the current object
+
+log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.conf')
+logging.config.fileConfig(log_file_path, disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
 
 HTTP_ORIGIN = ['http://127.0.0.1:8888',
                'http://localhost:3000',
@@ -51,6 +58,21 @@ async def setup_request(request: Request, call_next) -> JSONResponse:
         response: The JSON response
     """
     response = await call_next(request)
+
+    return response
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    idem = uuid.uuid4()
+    logger.info(f"rid={idem} start request path={request.url.path}")
+    start_time = datetime.now()
+
+    response = await call_next(request)
+
+    process_time = (datetime.now() - start_time).total_seconds()
+    formatted_process_time = '{0:.2f}'.format(process_time)
+    logger.info(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
 
     return response
 
