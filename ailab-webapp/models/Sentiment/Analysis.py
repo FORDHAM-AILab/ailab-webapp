@@ -1,48 +1,18 @@
+import torch.nn.functional
+
 from models.Sentiment import DataScraping as ds
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from nltk.tokenize import sent_tokenize
-import spacy
 import pysentiment2 as ps
 from transformers import pipeline
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from transformers import PegasusTokenizer, PegasusForConditionalGeneration
-from sense2vec import Sense2VecComponent
 
 import re
 
-# import nltk
-# nltk.download('vader_lexicon')
-
-
-def sentiment_analyzer_nltk(texts):
-    analyzer = SentimentIntensityAnalyzer()
-
-    pos_score_sum = 0
-    neu_score_sum = 0
-    neg_score_sum = 0
-    compound_score_sum = 0
-
-    for i in range(len(texts)):
-        scores = analyzer.polarity_scores(texts[i])
-        pos_score_sum += scores['pos']
-        neu_score_sum += scores['neu']
-        neg_score_sum += scores['neg']
-        compound_score_sum += scores['compound']
-        # print(texts[i])
-        # print(scores)
-
-    neg = float('{:.3f}'.format(neg_score_sum / len(texts)))
-    neu = float('{:.3f}'.format(neu_score_sum / len(texts)))
-    pos = float('{:.3f}'.format(pos_score_sum / len(texts)))
-    compound = float('{:.4f}'.format(compound_score_sum / len(texts)))
-
-    return {'neg': neg, 'neu': neu, 'pos': pos, 'compound': compound}
-
 
 # Loughran and McDonald Financial Sentiment
-def sentiment_analyzer_lm(texts):
+def sentiment_analyzer_lm(input_text):
     lm = ps.LM()
-    tokens = lm.tokenize(' '.join(texts))
+    tokens = lm.tokenize(input_text)
     score = lm.get_score(tokens)
     return score
 
@@ -59,8 +29,7 @@ def sentiment_analyzer_transfomers(texts):
 
     for i in range(len(texts)):
         result = classifier(texts[i])
-        print(texts[i])
-        print(result)
+
         if result[0]['label'] == 'positive':
             pos_count += 1
             pos_score += result[0]['score']
@@ -72,11 +41,69 @@ def sentiment_analyzer_transfomers(texts):
     return {'positive': pos_count, 'negative': neg_count, 'score': score}
 
 
-def financial_summation(texts):
+# News headlines or short posts
+def sentiment_analyzer_finbert(texts):
+    model_name = "ProsusAI/finbert"
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    pos_score, neg_score, neu_score = 0, 0, 0
+    texts_len = len(texts)
+
+    for i in range(texts_len):
+        input = tokenizer(texts[i], padding=True, truncation=True, return_tensors='pt')
+        output = model(**input)
+        scores = torch.nn.functional.softmax(output.logits, dim=-1)
+
+        pos_score += float(scores[0][0])
+        neg_score += float(scores[0][1])
+        neu_score += float(scores[0][2])
+
+    return {'positive': pos_score / texts_len, 'negative': neg_score / texts_len,
+            'neutral': neu_score / texts_len}
+
+
+def sentiment_analyzer_finbert_txt(input_text):
+    model_name = "ProsusAI/finbert"
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    tokens = tokenizer(input_text, add_special_tokens=False, return_tensors='pt')
+    input_id_blocks = tokens['input_ids'][0].split(510)
+    mask_blocks = tokens['attention_mask'][0].split(510)
+
+    block_size = 512
+
+    input_id_blocks = list(input_id_blocks)
+    mask_blocks = list(mask_blocks)
+
+    for i in range(len(input_id_blocks)):
+        input_id_blocks[i] = torch.cat([torch.Tensor([101]), input_id_blocks[i], torch.Tensor([102])])
+        mask_blocks[i] = torch.cat([torch.Tensor([1]), mask_blocks[i], torch.Tensor([1])])
+
+        pad_len = block_size - input_id_blocks[i].shape[0]
+
+        if pad_len > 0:
+            input_id_blocks[i] = torch.cat([input_id_blocks[i], torch.Tensor([0] * pad_len)])
+            mask_blocks[i] = torch.cat([mask_blocks[i], torch.Tensor([0] * pad_len)])
+
+    input_ids = torch.stack(input_id_blocks)
+    attention_mask = torch.stack(mask_blocks)
+    input_dict = {'input_ids': input_ids.long(), 'attention_mask': attention_mask.int()}
+    outputs = model(**input_dict)
+    scores = torch.nn.functional.softmax(outputs.logits, dim=-1)
+    scores = scores.mean(dim=0)
+
+    return {'positive': float(scores[0]), 'negative': float(scores[1]),
+            'neutral': float(scores[2])}
+
+
+def financial_summation(input_text):
     model_name = "human-centered-summarization/financial-summarization-pegasus"
     model = PegasusForConditionalGeneration.from_pretrained(model_name)
     tokenizer = PegasusTokenizer.from_pretrained(model_name)
 
+    texts = [s.strip() for s in input_text.splitlines()]
     summary = []
     for text in texts:
         if re.search('\w', text) is None:
@@ -90,28 +117,14 @@ def financial_summation(texts):
     return '\n'.join(summary)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 def news_analyzer(ticker=None):
-
     if ticker is None:
         news = ds.get_news()
     else:
         news = ds.get_stock_news(ticker)
 
-    # return sentiment_analyzer_nltk(news), sentiment_analyzer_lm(news)
-    return sentiment_analyzer_transfomers(news), sentiment_analyzer_lm(news)
+    return sentiment_analyzer_transfomers(news), sentiment_analyzer_lm(' '.join(news)), \
+           sentiment_analyzer_finbert(news)
 
 
 def txt_analyzer(file):
@@ -119,50 +132,15 @@ def txt_analyzer(file):
         texts = f.readlines()
         texts = ''.join(texts)
 
-    texts = sent_tokenize(texts)
-    # return sentiment_analyzer_nltk(texts), sentiment_analyzer_lm(texts)
-    return sentiment_analyzer_transfomers(texts), sentiment_analyzer_lm(texts)
+    return sentiment_analyzer_finbert_txt(texts), sentiment_analyzer_lm(texts)
 
 
-def entity_recognition_word2vec(text):
-    nlp = spacy.load('en_core_web_lg')
-    doc = nlp(text)
-    entities = []
-    for entity in doc.ents:
-        if entity.label_ == 'ORG':
-            print(entity.text, entity.label_)
-            entities.append(entity.text)
-    entities = list(set(entities))
-    print(entities)
-    for i in range(len(entities)):
-        for j in range(i+1, len(entities)):
-            doc1 = nlp(entities[i])
-            doc2 = nlp(entities[j])
-            simi_score = doc1.similarity(doc2)
-            print(doc1, '<->', doc2, simi_score) if simi_score > 0.8 else ''
+def txt_summation(file):
+    with open(file, 'r') as f:
+        texts = f.readlines()
+        texts = ' '.join(texts)
 
-
-def entity_recognition_sense2vec(text):
-    nlp = spacy.load("en_core_web_lg")
-    s2v = nlp.add_pipe("sense2vec")
-    s2v.from_disk("/Users/alinluo/Desktop/Samples/s2v_old")
-
-    doc = nlp(text)
-    entities = []
-    entities_text = []
-    for entity in doc.ents:
-        if entity.label_ == 'ORG':
-            print(entity.text, entity.label_, entity.has_vector, entity._.in_s2v)
-            # print(entity._.s2v_most_similar(3))
-            if entity.text not in entities_text:
-                entities.append(entity)
-                entities_text.append(entity.text)
-    print(entities)
-    # print(entities[0].similarity(entities[2]))
-    # print(entities[0]._.s2v_similarity(entities[2]))
-
-
-
+    return financial_summation(texts)
 
 
 if __name__ == '__main__':
@@ -170,17 +148,5 @@ if __name__ == '__main__':
 
     # print(txt_analyzer('/Users/alinluo/Desktop/Samples/sample news.txt'))
     # print(',.,.,.,.,.,.,.,.,.,')
-    # print(txt_analyzer('/Users/alinluo/Desktop/Samples/sample news 2.txt'))
-    # print(',.,.,.,.,.,.,.,.,.,')
-    # print(txt_analyzer('/Users/alinluo/Desktop/Samples/sample news 3.txt'))
-    # print(',.,.,.,.,.,.,.,.,.,')
-    # print(txt_analyzer('/Users/alinluo/Desktop/Samples/sample news 4.txt'))
-
-    # with open('/Users/alinluo/Desktop/Samples/sample news 2.txt', 'r') as f:
-    #     texts = f.readlines()
-    #     texts = ' '.join(texts)
-    # # entity_recognition_sense2vec(texts)
     #
-    # texts = [s.strip() for s in texts.splitlines()]
-    # # print(texts)
-    # print(financial_summation(texts))
+    # print(txt_summation('/Users/alinluo/Desktop/Samples/sample news 2.txt'))
