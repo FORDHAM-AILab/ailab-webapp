@@ -127,26 +127,21 @@ def news_analyzer(ticker=None):
            sentiment_analyzer_finbert(news)
 
 
-def txt_analyzer(file):
-    with open(file, 'r') as f:
-        texts = f.readlines()
-        texts = ''.join(texts)
-
+def txt_analyzer(texts):
     return sentiment_analyzer_finbert_txt(texts), sentiment_analyzer_lm(texts)
 
 
-def txt_summation(file):
-    with open(file, 'r') as f:
-        texts = f.readlines()
-        texts = ' '.join(texts)
-
+def txt_summation(texts):
     return financial_summation(texts)
 
 
 if __name__ == '__main__':
     print(news_analyzer())
 
-    # print(txt_analyzer('/Users/alinluo/Desktop/Samples/sample news.txt'))
+    # with open('/Users/alinluo/Desktop/Samples/sample news.txt', 'r') as f:
+    #     texts = f.readlines()
+    #     texts = ''.join(texts)
+    # print(txt_analyzer(texts))
     # print(',.,.,.,.,.,.,.,.,.,')
     #
-    # print(txt_summation('/Users/alinluo/Desktop/Samples/sample news 2.txt'))
+    # print(txt_summation(texts))

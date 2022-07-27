@@ -29,19 +29,19 @@ async def get_single_stock_news_sentiment(ticker):
     return ResultResponse(status=0, result=result)
 
 
-@router.get("/get_text_sentiment/{txt_file}")
-async def get_text_sentiment(txt_file):
+@router.post("/get_text_sentiment")
+async def get_text_sentiment(texts: str):
     try:
-        result = txt_analyzer(txt_file)
+        result = txt_analyzer(texts)
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status=0, result=result)
 
 
-@router.get("/financial_summary/{txt_file}")
-async def financial_summary(txt_file):
+@router.get("/financial_summary")
+async def financial_summary(texts: str):
     try:
-        result = txt_summation(txt_file)
+        result = txt_summation(texts)
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status=0, result=result)
