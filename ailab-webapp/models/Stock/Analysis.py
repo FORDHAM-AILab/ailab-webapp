@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import talib
 
+
 class Analysis:
     def __init__(self,df:pd.DataFrame): # series index is 'date', columns are supposed to be 'Open','High','Low','Close','Adj Close','Volume' like yahoo finance download
         if not isinstance(df, pd.DataFrame):

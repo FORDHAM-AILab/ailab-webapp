@@ -15,6 +15,18 @@ from .CONSTS import TIME_ZONE
 from .webapp_models.generic_models import ResultResponse
 
 
+def sqlquote(value):
+    """Naive SQL quoting
+
+    All values except NULL are returned as SQL strings in single quotes,
+    with any embedded quotes doubled.
+
+    """
+    if value is None:
+        return 'NULL'
+    return "'{}'".format(str(value).replace("'", "''"))
+
+
 def standard_response(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
@@ -125,7 +137,7 @@ def round_pct(l: List[float], decimal: int) -> List[float]:
 
 # ------------------- Check market time ----------------------
 
-def checkMarketTime(now = None):
+def checkMarketTime(now=None):
     import datetime, pytz
     import pandas_market_calendars as mcal
 
@@ -133,9 +145,9 @@ def checkMarketTime(now = None):
     if not now:
         now = datetime.datetime.now(tz)
     nyse = mcal.get_calendar('NYSE')
-    market_days = nyse.valid_days(start_date=now, end_date=now,tz=tz)
-    openTime = datetime.time(hour = 9, minute = 30, second = 0)
-    closeTime = datetime.time(hour = 16, minute = 0, second = 0)
+    market_days = nyse.valid_days(start_date=now, end_date=now, tz=tz)
+    openTime = datetime.time(hour=9, minute=30, second=0)
+    closeTime = datetime.time(hour=16, minute=0, second=0)
     # If not market day
     if now.strftime('%Y-%m-%d') not in market_days:
         return False
@@ -144,6 +156,7 @@ def checkMarketTime(now = None):
         return False
 
     return True
+
 
 # ---------------------- SQL Related... ----------------------
 

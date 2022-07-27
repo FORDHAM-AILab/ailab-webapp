@@ -283,13 +283,7 @@ class AuthMySQLClient(DatabaseClient):
             result = helpers.sql_to_dict(result)
 
         if len(result) > 0:
-            internal_user = InternalUser(
-                internal_sub_id=result[0]["internal_sub_id"],
-                external_sub_id=result[0]["external_sub_id"],
-                username=result[0]["username"],
-                email=result[0]["email"],
-                created_at=result[0]["created_at"],
-            )
+            internal_user = InternalUser(**result[0])
 
         return internal_user
 
