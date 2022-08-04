@@ -80,7 +80,7 @@ async def google_login_callback(
         internal_auth_token = await auth_util.create_internal_auth_token(internal_user)
 
         # Redirect the user to the home page
-        home_url = 'http://localhost:3000/admin/home'
+        home_url = f'{config.FRONTEND_URL}/admin/home'
 
         redirect_url = f"{home_url}?authToken={internal_auth_token}"
         response = RedirectResponse(url=redirect_url)
