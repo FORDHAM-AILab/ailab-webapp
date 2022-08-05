@@ -1,3 +1,5 @@
+import logging
+
 from starlette.responses import RedirectResponse, JSONResponse
 
 from .. import config
@@ -21,7 +23,7 @@ access_token_cookie_scheme = auth_schemes.AccessTokenCookieBearer()
 
 # Initialize db client
 mysqldb_client = get_db_client(config.DATABASE_TYPE)
-
+logger = logging.getLogger(__name__)
 
 @router.get("/login-redirect")
 async def login_redirect(auth_provider: str):
@@ -40,7 +42,7 @@ async def login_redirect(auth_provider: str):
         response = RedirectResponse(url=request_uri)
 
         # Make this a secure cookie for production use
-        response.set_cookie(key="state", value=f"Bearer {state_csrf_token}", httponly=True)
+        response.set_cookie(key="state", value=f"Bearer {state_csrf_token}", httponly=True, samesite='none', secure=True)
 
         return response
 
@@ -120,8 +122,8 @@ async def login(response: JSONResponse, internal_user: InternalUser = Depends(au
         )
 
         # TODO: Make this a secure cookie for production use
-        response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, samesite='lax')
-
+        response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, samesite='none', secure=True)
+        logger.debug('------------ Called /login/ ----------------')
         return response
 
 
