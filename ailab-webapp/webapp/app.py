@@ -47,6 +47,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Authorization"]
+
 
 )
 
@@ -86,6 +88,7 @@ async def log_requests(request: Request, call_next):
 
 @app.get("/app")
 def test():
+
     return {'detail': 'suceed!!!'}
 
 
@@ -102,7 +105,7 @@ def test_db():
 def test_cookies_set():
     response = JSONResponse(content='Fake content')
     response.set_cookie(key='test_key', value='test_value')
-
+    logger.info('testttttt')
     return response
 
 
