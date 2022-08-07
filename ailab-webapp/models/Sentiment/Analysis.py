@@ -38,7 +38,7 @@ def sentiment_analyzer_transfomers(texts):
             neg_score += result[0]['score']
 
     score = (pos_score - neg_score) / len(texts)
-    return {'positive': pos_count, 'negative': neg_count, 'score': score}
+    return {'positive_count': pos_count, 'negative_count': neg_count, 'score': score}
 
 
 # News headlines or short posts
@@ -117,6 +117,37 @@ def financial_summation(input_text):
     return '\n'.join(summary)
 
 
+def tweet_preprocess(text):
+    new_text = []
+    for t in text.split():
+        t = '' if t.startswith('@') else t
+        t = '' if t.startswith('http') else t
+        t = '' if t.startswith('#') else t
+        new_text.append(t)
+    return ' '.join(new_text)
+
+
+def sentiment_analyzer_twitter_xlm(texts):
+    model_name = 'cardiffnlp/twitter-xlm-roberta-base-sentiment'
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    pos_score, neg_score, neu_score = 0, 0, 0
+    texts_len = len(texts)
+
+    for i in range(texts_len):
+        input = tokenizer(tweet_preprocess(texts[i]), return_tensors='pt')
+        output = model(**input)
+        scores = torch.nn.functional.softmax(output.logits, dim=-1)
+
+        neg_score += float(scores[0][0])
+        neu_score += float(scores[0][1])
+        pos_score += float(scores[0][2])
+
+    return {'positive': pos_score / texts_len, 'negative': neg_score / texts_len,
+            'neutral': neu_score / texts_len}
+
+
 def news_analyzer(ticker=None):
     if ticker is None:
         news = ds.get_news()
@@ -135,8 +166,17 @@ def txt_summation(texts):
     return financial_summation(texts)
 
 
+def tweets_analyzer(search_requirement, tweets_num=None):
+    if tweets_num is None:
+        tweets = ds.get_tweets(search_requirement)
+    else:
+        tweets = ds.get_tweets(search_requirement, tweets_num)
+
+    return sentiment_analyzer_twitter_xlm(tweets), sentiment_analyzer_finbert(tweets)
+
+
 if __name__ == '__main__':
-    print(news_analyzer())
+    # print(news_analyzer())
 
     # with open('/Users/alinluo/Desktop/Samples/sample news.txt', 'r') as f:
     #     texts = f.readlines()
@@ -145,3 +185,6 @@ if __name__ == '__main__':
     # print(',.,.,.,.,.,.,.,.,.,')
     #
     # print(txt_summation(texts))
+
+    requirement = 'google stock within_time:1d lang:en'
+    print(tweets_analyzer(requirement))
