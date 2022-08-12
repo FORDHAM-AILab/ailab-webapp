@@ -17,7 +17,7 @@ def sentiment_analyzer_lm(input_text):
     return score
 
 
-def sentiment_analyzer_transfomers(texts):
+def sentiment_analyzer_news(texts):
     model_name = 'mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis'
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -136,7 +136,7 @@ def sentiment_analyzer_twitter_xlm(texts):
     texts_len = len(texts)
 
     for i in range(texts_len):
-        input = tokenizer(tweet_preprocess(texts[i]), return_tensors='pt')
+        input = tokenizer(texts[i], return_tensors='pt')
         output = model(**input)
         scores = torch.nn.functional.softmax(output.logits, dim=-1)
 
@@ -154,7 +154,7 @@ def news_analyzer(ticker=None):
     else:
         news = ds.get_stock_news(ticker)
 
-    return sentiment_analyzer_transfomers(news), sentiment_analyzer_lm(' '.join(news)), \
+    return sentiment_analyzer_news(news), sentiment_analyzer_lm(' '.join(news)), \
            sentiment_analyzer_finbert(news)
 
 
@@ -172,7 +172,19 @@ def tweets_analyzer(search_requirement, tweets_num=None):
     else:
         tweets = ds.get_tweets(search_requirement, tweets_num)
 
+    for i in range(len(tweets)):
+        tweets[i] = tweet_preprocess(tweets[i])
+
     return sentiment_analyzer_twitter_xlm(tweets), sentiment_analyzer_finbert(tweets)
+
+
+def reddits_analyzer(search_requirement, reddits_num=None):
+    if reddits_num is None:
+        reddits = ds.get_reddits(search_requirement)
+    else:
+        reddits = ds.get_reddits(search_requirement, reddits_num)
+
+    return sentiment_analyzer_finbert(reddits)
 
 
 if __name__ == '__main__':
@@ -186,5 +198,7 @@ if __name__ == '__main__':
     #
     # print(txt_summation(texts))
 
-    requirement = 'google stock within_time:1d lang:en'
-    print(tweets_analyzer(requirement))
+    # requirement = 'google stock within_time:1d lang:en'
+    # print(tweets_analyzer(requirement, 10))
+
+    print(reddits_analyzer('google stock', 10))
