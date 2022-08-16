@@ -188,7 +188,7 @@ def reddits_analyzer(search_requirement, reddits_num=None):
 
 
 if __name__ == '__main__':
-    # print(news_analyzer())
+    print(news_analyzer())
 
     # with open('/Users/alinluo/Desktop/Samples/sample news.txt', 'r') as f:
     #     texts = f.readlines()
@@ -201,4 +201,4 @@ if __name__ == '__main__':
     # requirement = 'google stock within_time:1d lang:en'
     # print(tweets_analyzer(requirement, 10))
 
-    print(reddits_analyzer('google stock', 10))
+    # print(reddits_analyzer('google stock', 10))
