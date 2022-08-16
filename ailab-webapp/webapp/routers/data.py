@@ -72,7 +72,7 @@ def get_cds_data(requestBody: CDSData):
         conditions = region_query + industry_query + obligation_assetrank_query + credit_events_query + currency_query
         where_clause = 'WHERE ' + conditions if conditions != '' else ''
         limit = f'limit {requestBody["limit"]}' if requestBody["limit"] else ""
-        query = "SELECT * from fermi.cds " + where_clause + limit
+        query = "SELECT * from fermi_db.cds " + where_clause + limit
         df = pd.read_sql(query, mysql_engine)
         df.replace({np.nan: None}, inplace=True)
         result = df.to_json(orient="records")
@@ -88,7 +88,7 @@ def cds_get_unique_val(param: str):
 
     try:
 
-        query = f"SELECT DISTINCT {param} from CDS.CDSData"
+        query = f"SELECT DISTINCT {param} from fermi_db.cds"
         df = pd.read_sql(query, mysql_engine)
         result = list(df[param])
 

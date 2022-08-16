@@ -39,6 +39,8 @@ class AccessTokenCookieBearer():
 		async with exception_handling():
 			internal_access_token: str = request.cookies.get('access_token')
 			if not internal_access_token:
+				internal_access_token = request.headers['Authorization']
+			if not internal_access_token:
 				raise UnauthorizedUser("Invalid access token cookie")
 
 			# Remove Bearer

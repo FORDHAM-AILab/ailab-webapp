@@ -1,3 +1,6 @@
+import logging
+import os
+
 from starlette.responses import RedirectResponse, JSONResponse
 
 from .. import config
@@ -40,7 +43,7 @@ async def login_redirect(auth_provider: str):
         response = RedirectResponse(url=request_uri)
 
         # Make this a secure cookie for production use
-        response.set_cookie(key="state", value=f"Bearer {state_csrf_token}", httponly=True)
+        response.set_cookie(key="state", value=f"Bearer {state_csrf_token}", httponly=True, samesite='none', secure=True)
 
         return response
 
@@ -80,7 +83,7 @@ async def google_login_callback(
         internal_auth_token = await auth_util.create_internal_auth_token(internal_user)
 
         # Redirect the user to the home page
-        home_url = 'http://localhost:3000/admin/home'
+        home_url = f'{config.FRONTEND_URL}/admin/home'
 
         redirect_url = f"{home_url}?authToken={internal_auth_token}"
         response = RedirectResponse(url=redirect_url)
@@ -120,7 +123,8 @@ async def login(response: JSONResponse, internal_user: InternalUser = Depends(au
         )
 
         # TODO: Make this a secure cookie for production use
-        response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True)
+        response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, samesite='none', secure=True)
+        response.headers['X-Authorization'] = f"Bearer {access_token}"
 
         return response
 
@@ -171,5 +175,4 @@ async def user_session_status(
                 "userInfo": internal_user.dict() if internal_user else None
             }),
         )
-
         return response

@@ -3,6 +3,8 @@ import sys
 import uuid
 from datetime import datetime
 
+from webapp import helpers
+
 sys.path.append(os.getcwd())
 
 import logging
@@ -44,7 +46,10 @@ app.add_middleware(
     allow_origins=HTTP_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
+    expose_headers=["X-Authorization"]
+
+
 )
 
 app.add_middleware(SessionMiddleware, secret_key='!secret')
@@ -83,7 +88,31 @@ async def log_requests(request: Request, call_next):
 
 @app.get("/app")
 def test():
+
     return {'detail': 'suceed!!!'}
+
+
+@app.get("/test/test_db", tags=['test'])
+def test_db():
+    with helpers.mysql_session_scope() as session:
+        result = session.execute(f"""SELECT * FROM users limit 10 """)
+        result = helpers.sql_to_dict(result)
+
+    return result
+
+
+@app.get("/test/test_cookies_set", tags=['test'])
+def test_cookies_set():
+    response = JSONResponse(content='Fake content')
+    response.set_cookie(key='test_key', value='test_value')
+    logger.info('testttttt')
+    return response
+
+
+@app.get("/test/test_cookies_get", tags=['test'])
+def test_cookies_get(request: Request):
+
+    return request.cookies
 
 
 if __name__ == '__main__':

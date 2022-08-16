@@ -24,14 +24,20 @@ MONGODB_DATABASE = "testdb"
 # MySQL
 MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL", None)
 
+# Front end endpoint
+FRONTEND_URL = os.environ.get("FRONTEND_URL", None)
+
+#Backend endpoint
+BACKEND_URL = os.environ.get("BACKEND_URL", None)
+
+
 # Google login
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", None)
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
-GOOGLE_REDIRECT_URL = "http://localhost:8888/google-login-callback/"
+GOOGLE_REDIRECT_URL = f"{BACKEND_URL}/google-login-callback/"
 
-# Front end endpoint
-FRONTEND_URL = "http://localhost:3000"
+
 
 # JWT access token configuration: "openssl rand -hex 32"
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", None)
