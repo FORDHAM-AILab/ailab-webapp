@@ -8,11 +8,19 @@ import yfinance
 def get_hist_stock_price(tickers, start_date, end_date):
     result = pd.DataFrame(columns=tickers)
     for ticker in tickers:
-        result[ticker] = yfinance.download(ticker, period='3m',interval='1m')['Adj Close'].tail(1)
+        result[ticker] = stock_info.get_data(ticker, start_date=start_date, end_date=end_date)['adjclose']
 
     result['date'] = result.index
     result['date'] = result['date'].dt.strftime('%Y-%m-%d')
     result.reset_index(inplace=True, drop=True)
+    return result
+
+
+def get_real_time_data(tickers):
+    result = pd.DataFrame(columns=tickers)
+    for ticker in tickers:
+        result[ticker] = yfinance.download(ticker, period='3m',interval='1m')['Adj Close'].tail(1).values
+
     return result
 
 
