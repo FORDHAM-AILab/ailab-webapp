@@ -158,12 +158,12 @@ def news_analyzer(ticker=None):
            sentiment_analyzer_finbert(news)
 
 
-def txt_analyzer(texts):
-    return sentiment_analyzer_finbert_txt(texts), sentiment_analyzer_lm(texts)
+def txt_analyzer(input_text):
+    return sentiment_analyzer_finbert_txt(input_text), sentiment_analyzer_lm(input_text)
 
 
-def txt_summation(texts):
-    return financial_summation(texts)
+def txt_summation(input_text):
+    return financial_summation(input_text)
 
 
 def tweets_analyzer(search_requirement, tweets_num=None):
