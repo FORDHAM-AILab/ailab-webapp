@@ -16,6 +16,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
 
+from .config import env
+
 app = FastAPI()
 
 app.include_router(auth.router)
@@ -110,6 +112,13 @@ def test_cookies_set():
 def test_cookies_get(request: Request):
 
     return request.cookies
+
+
+@app.get("/test/info", tags=['test'])
+async def info():
+    return {
+        'env': env
+    }
 
 
 if __name__ == '__main__':
