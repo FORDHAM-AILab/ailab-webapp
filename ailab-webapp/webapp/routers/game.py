@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from models.Portfolio import Portfolio
 from .. import helpers, CONSTS
 from ..CONSTS import TIME_ZONE
-from ..data.stock import get_hist_stock_price
+from ..data.stock import get_hist_stock_price, get_real_time_data
 from ..webapp_models.db_models import InternalUser
 import uuid
 from collections import defaultdict
@@ -83,7 +83,7 @@ async def update_portfolio(request: Request,
                 new_shares[ticker] += n_shares
             new_shares = dict(new_shares)
             # get today's price:
-            new_prices = get_hist_stock_price(list(new_shares.keys()), current_time, current_time).to_dict(orient='records')[0]
+            new_prices = get_real_time_data(list(new_shares.keys())).to_dict(orient='records')[0]
             # deduct from the current balance
             for ticker, shares in new_transactions.items():
                 # insufficient buying power

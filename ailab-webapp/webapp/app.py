@@ -16,6 +16,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
 
+from .config import env
+
 app = FastAPI()
 
 app.include_router(auth.router)
@@ -29,9 +31,9 @@ app.include_router(users.router)
 
 # TODO: cache the current object
 
-log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.conf')
-logging.config.fileConfig(log_file_path, disable_existing_loggers=False, )
-logger = logging.getLogger(__name__)
+# log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.conf')
+# logging.config.fileConfig(log_file_path, disable_existing_loggers=False, )
+# logger = logging.getLogger(__name__)
 
 HTTP_ORIGIN = ['http://127.0.0.1:8888',
                'http://localhost:3000',
@@ -47,9 +49,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Authorization"]
-
-
+    expose_headers=["X-Authorization", "x-authorization", "Authorization", "authorization"]
 )
 
 app.add_middleware(SessionMiddleware, secret_key='!secret')
@@ -71,19 +71,19 @@ async def setup_request(request: Request, call_next) -> JSONResponse:
     return response
 
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    idem = uuid.uuid4()
-    logger.info(f"rid={idem} start request path={request.url.path}")
-    start_time = datetime.now()
-
-    response = await call_next(request)
-
-    process_time = (datetime.now() - start_time).total_seconds()
-    formatted_process_time = '{0:.2f}'.format(process_time)
-    logger.info(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
-
-    return response
+# @app.middleware("http")
+# async def log_requests(request: Request, call_next):
+#     idem = uuid.uuid4()
+#     logger.info(f"rid={idem} start request path={request.url.path}")
+#     start_time = datetime.now()
+#
+#     response = await call_next(request)
+#
+#     process_time = (datetime.now() - start_time).total_seconds()
+#     formatted_process_time = '{0:.2f}'.format(process_time)
+#     logger.info(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
+#
+#     return response
 
 
 @app.get("/app")
@@ -105,7 +105,6 @@ def test_db():
 def test_cookies_set():
     response = JSONResponse(content='Fake content')
     response.set_cookie(key='test_key', value='test_value')
-    logger.info('testttttt')
     return response
 
 
@@ -113,6 +112,13 @@ def test_cookies_set():
 def test_cookies_get(request: Request):
 
     return request.cookies
+
+
+@app.get("/test/info", tags=['test'])
+async def info():
+    return {
+        'env': env
+    }
 
 
 if __name__ == '__main__':

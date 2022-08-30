@@ -1,5 +1,16 @@
 import os
 from dotenv import load_dotenv
+
+from pydantic import BaseSettings
+
+
+class Settings(BaseSettings):
+    env: str = 'dev'
+
+settings = Settings()
+env = settings.env
+
+
 load_dotenv()
 
 # Supported database types by name
@@ -21,14 +32,14 @@ MONGODB_PORT = int(os.environ.get("MONGODB_PORT", 27017))
 MONGODB_COLLECTION = "testdb"
 MONGODB_DATABASE = "testdb"
 
-# MySQL
-MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL", None)
-
-# Front end endpoint
-FRONTEND_URL = os.environ.get("FRONTEND_URL", None)
-
-#Backend endpoint
-BACKEND_URL = os.environ.get("BACKEND_URL", None)
+if env == 'dev':
+    MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL_DEV", None)
+    FRONTEND_URL = os.environ.get("FRONTEND_URL_DEV", None)
+    BACKEND_URL = os.environ.get("BACKEND_URL_DEV", None)
+else:
+    MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL_PROD", None)
+    FRONTEND_URL = os.environ.get("FRONTEND_URL_PROD", None)
+    BACKEND_URL = os.environ.get("BACKEND_URL_PROD", None)
 
 
 # Google login
@@ -36,7 +47,6 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", None)
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 GOOGLE_REDIRECT_URL = f"{BACKEND_URL}/google-login-callback/"
-
 
 
 # JWT access token configuration: "openssl rand -hex 32"

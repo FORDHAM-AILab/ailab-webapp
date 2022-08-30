@@ -43,7 +43,7 @@ async def login_redirect(auth_provider: str):
         response = RedirectResponse(url=request_uri)
 
         # Make this a secure cookie for production use
-        response.set_cookie(key="state", value=f"Bearer {state_csrf_token}", httponly=True, samesite='none', secure=True)
+        response.set_cookie(key="state", value=f"Bearer {state_csrf_token}", httponly=True, samesite='lax', secure=False)
 
         return response
 
@@ -123,7 +123,7 @@ async def login(response: JSONResponse, internal_user: InternalUser = Depends(au
         )
 
         # TODO: Make this a secure cookie for production use
-        response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, samesite='none', secure=True)
+        response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, samesite='lax', secure=False)
         response.headers['X-Authorization'] = f"Bearer {access_token}"
 
         return response
