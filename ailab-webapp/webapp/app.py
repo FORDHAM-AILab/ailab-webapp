@@ -16,8 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
 
-from .config import env
-
+from webapp.config import env
 app = FastAPI()
 
 app.include_router(auth.router)
