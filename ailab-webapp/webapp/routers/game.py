@@ -18,6 +18,7 @@ from ..auth import schemes as auth_schemes
 from ..helpers import format_pct, format_digit, format_currency, round_result
 from ..webapp_models.generic_models import ResultResponse
 from fastapi_utils.tasks import repeat_every
+from starlette.concurrency import run_in_threadpool
 
 router = APIRouter(
     prefix="/game",
@@ -288,3 +289,44 @@ async def get_user_position(internal_user: InternalUser = Depends(access_token_c
     return ResultResponse(status=0, result=rows,
                           message=f"Found user: {internal_user.username}'s current account info",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
+
+
+# repeat every hour
+@router.on_event('startup')
+@repeat_every(seconds=60 * 60)
+@router.get("/rm_game/create_eod_records")
+async def create_eod_records(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    insert the end of day records for all game users
+    """
+    try:
+        records = await run_in_threadpool(calculate_eod_records)
+        async with helpers.mysql_session_scope() as session:
+            await session.execute(
+                f"""Some sql queries to insert records into records table""")
+    except:
+        pass
+
+
+def calculate_eod_records():
+    """
+    calculate end of day records for all game users
+    """
+    pass
+
+
+@router.get("/rm_game/get_historical_records")
+async def get_historical_records(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    get historical records for this internal_user
+    """
+    pass
+
+
+@router.get("/rm_game/get_historical_net_account_value")
+async def get_historical_net_account_value(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    get a summary of all users' records
+    this is ONLY available for administrators (e.g. prof. Chen), i.e. we shall add an extra field to internal_user like 'type': student/GA/Administrator
+    """
+    pass
