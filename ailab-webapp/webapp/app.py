@@ -92,8 +92,8 @@ def test():
 
 
 @app.get("/test/test_db", tags=['test'])
-def test_db():
-    with helpers.mysql_session_scope() as session:
+async def test_db():
+    async with helpers.mysql_session_scope() as session:
         result = session.execute(f"""SELECT * FROM users limit 10 """)
         result = helpers.sql_to_dict(result)
 
