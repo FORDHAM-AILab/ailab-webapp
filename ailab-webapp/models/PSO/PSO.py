@@ -1,15 +1,23 @@
 import torch
 
 
-def pso(func, lb, ub, args=(), kwargs={},
-        particle_num=100, maxit=100, c1=0.5, c2=0.5, w=0.5,
-        constraints_particle_adjust_func=None,
+def pso(func, lb, ub, args=(), kwargs={}, initial_guess=None,
+        particle_num=100, maxit=20, c1=0.5, c2=0.5, w=0.5,
+        constraints_particle_adjust_func=None, cons_args=(), cons_kwargs={},
         device='cpu', verbose=False):
-    lb = torch.tensor(lb, device=device)
-    ub = torch.tensor(ub, device=device)
+    if type(lb) is not torch.Tensor:
+        lb = torch.tensor(lb, device=device)
+    if type(ub) is not torch.Tensor:
+        ub = torch.tensor(ub, device=device)
     dimension = len(lb)
 
-    X = lb + (ub - lb) * torch.rand(particle_num, dimension, device=device)
+    if initial_guess is None:
+        X = lb + (ub - lb) * torch.rand(particle_num, dimension, device=device)
+    else:
+        if type(initial_guess) is torch.Tensor:
+            X = initial_guess
+        else:
+            X = torch.tensor(initial_guess, device=device)
     V = torch.rand(particle_num, dimension, device=device)
 
     pbest = torch.clone(X)
@@ -24,7 +32,7 @@ def pso(func, lb, ub, args=(), kwargs={},
         X += V
 
         if constraints_particle_adjust_func is not None:
-            X = constraints_particle_adjust_func(X, *args, **kwargs)
+            X = constraints_particle_adjust_func(X, *cons_args, **cons_kwargs)
 
         obj = torch.tensor([func(x, *args, **kwargs) for x in X], device=device)
         pbest[(pbest_obj >= obj)] = X[(pbest_obj >= obj)]
@@ -38,3 +46,38 @@ def pso(func, lb, ub, args=(), kwargs={},
             print(f'best objective value: {float(gbest_obj)}')
 
     return pbest, pbest_obj, gbest, gbest_obj
+
+
+# # constraints_particle_adjust_functions
+#
+# # With lower or upper bounds
+# def bounded(X, lower_bound=None, upper_bound=None):
+#     if lower_bound is not None:
+#         X = torch.maximum(X, lower_bound)
+#     if upper_bound is not None:
+#         X = torch.minimum(X, upper_bound)
+#     return X
+#
+#
+# # Non-decreasing or non-increasing
+# def monotonic(X, if_mono_increasing: bool, left_step=True):
+#     for x in X:
+#         if if_mono_increasing:
+#             if left_step:
+#                 for i in range(len(x) - 1):
+#                     if x[i+1] < x[i]:
+#                         x[i+1] = x[i]
+#             else:
+#                 for i in range(1, len(x)):
+#                     if x[-i] < x[-(i+1)]:
+#                         x[-(i+1)] = x[-i]
+#         else:
+#             if left_step:
+#                 for i in range(len(x) - 1):
+#                     if x[i + 1] > x[i]:
+#                         x[i+1] = x[i]
+#             else:
+#                 for i in range(1, len(x)):
+#                     if x[-i] > x[-(i+1)]:
+#                         x[-(i + 1)] = x[-i]
+#     return X
