@@ -48,36 +48,37 @@ def pso(func, lb, ub, args=(), kwargs={}, initial_guess=None,
     return pbest, pbest_obj, gbest, gbest_obj
 
 
-# # constraints_particle_adjust_functions
-#
-# # With lower or upper bounds
-# def bounded(X, lower_bound=None, upper_bound=None):
-#     if lower_bound is not None:
-#         X = torch.maximum(X, lower_bound)
-#     if upper_bound is not None:
-#         X = torch.minimum(X, upper_bound)
-#     return X
-#
-#
-# # Non-decreasing or non-increasing
-# def monotonic(X, if_mono_increasing: bool, left_step=True):
-#     for x in X:
-#         if if_mono_increasing:
-#             if left_step:
-#                 for i in range(len(x) - 1):
-#                     if x[i+1] < x[i]:
-#                         x[i+1] = x[i]
-#             else:
-#                 for i in range(1, len(x)):
-#                     if x[-i] < x[-(i+1)]:
-#                         x[-(i+1)] = x[-i]
-#         else:
-#             if left_step:
-#                 for i in range(len(x) - 1):
-#                     if x[i + 1] > x[i]:
-#                         x[i+1] = x[i]
-#             else:
-#                 for i in range(1, len(x)):
-#                     if x[-i] > x[-(i+1)]:
-#                         x[-(i + 1)] = x[-i]
-#     return X
+# constraints_particle_adjust_functions
+
+# With lower or upper bounds
+def bounded(X, lower_bound=None, upper_bound=None):
+    for x in X:
+        if lower_bound is not None:
+            X = torch.maximum(X, lower_bound)
+        if upper_bound is not None:
+            X = torch.minimum(X, upper_bound)
+    return X
+
+
+# Non-decreasing or non-increasing
+def monotonic(X, if_mono_increasing: bool, left_step=True):
+    for x in X:
+        if if_mono_increasing:
+            if left_step:
+                for i in range(len(x) - 1):
+                    if x[i+1] < x[i]:
+                        x[i+1] = x[i]
+            else:
+                for i in range(1, len(x)):
+                    if x[-i] < x[-(i+1)]:
+                        x[-(i+1)] = x[-i]
+        else:
+            if left_step:
+                for i in range(len(x) - 1):
+                    if x[i + 1] > x[i]:
+                        x[i+1] = x[i]
+            else:
+                for i in range(1, len(x)):
+                    if x[-i] > x[-(i+1)]:
+                        x[-(i + 1)] = x[-i]
+    return X
