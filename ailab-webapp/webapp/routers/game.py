@@ -18,6 +18,7 @@ from ..auth import schemes as auth_schemes
 from ..helpers import format_pct, format_digit, format_currency, round_result
 from ..webapp_models.generic_models import ResultResponse
 from fastapi_utils.tasks import repeat_every
+from starlette.concurrency import run_in_threadpool
 
 router = APIRouter(
     prefix="/game",
@@ -98,7 +99,7 @@ async def update_portfolio(request: Request,
             # get the historical price table for one year for VaR
             annual_price = get_hist_stock_price(list(new_shares.keys()),
                                                 datetime.now(CONSTS.TIME_ZONE) - timedelta(days=365), datetime.now(CONSTS.TIME_ZONE))
-            current_weights = [new_shares[ticker] for ticker in annual_price.columns[:-1]]
+            current_weights = [new_shares[ticker] for ticker in annual_price.columns[:-1]] # ??????
             current_weights = [shares / sum(current_weights) for shares in current_weights]
             current_portfolio = Portfolio(df=annual_price, weights=current_weights)
             hist_var = current_portfolio.hvar()
@@ -113,7 +114,7 @@ async def update_portfolio(request: Request,
             # update buying_power
             buying_power = market_value * 0.8 + (cash_balance * 2 if cash_balance > 0 else cash_balance)
 
-            # update account, transaction and portfoliio info
+            # update account, transaction and portfolio info
             async with helpers.mysql_session_scope() as session:
                 # update account
                 await session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
@@ -287,4 +288,137 @@ async def get_user_position(internal_user: InternalUser = Depends(access_token_c
 
     return ResultResponse(status=0, result=rows,
                           message=f"Found user: {internal_user.username}'s current account info",
+                          date_done=str(datetime.now(TIME_ZONE).isoformat()))
+
+
+# repeat every hour
+@router.on_event('startup')
+@repeat_every(seconds=60 * 60)
+@router.get("/rm_game/create_eod_records")
+async def create_eod_records(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    insert the end of day records for all game users
+    """
+    try:
+        records = await run_in_threadpool(calculate_eod_records)
+        async with helpers.mysql_session_scope() as session:
+            await session.execute(
+                f"""Some sql queries to insert records into records table""")
+    except:
+        pass
+
+
+def calculate_eod_records():
+    """
+    calculate end of day records for all game users
+    """
+    import pandas_market_calendars as mcal
+    import datetime
+    import yfinance as yf
+
+    now = datetime.datetime.now(CONSTS.TIME_ZONE)
+    nyse = mcal.get_calendar('NYSE')
+    market_days = nyse.valid_days(start_date=now, end_date=now, tz=CONSTS.TIME_ZONE)
+    current_time = datetime.datetime.now(CONSTS.TIME_ZONE).isoformat()
+    # If market day
+    if now.strftime('%Y-%m-%d') in market_days:
+        async with helpers.mysql_session_scope() as session:
+            results = await session.execute(f"""SELECT * FROM game_rm_portfolio""")
+            results = helpers.sql_to_dict(results)
+            for i in range(len(results)):
+                result = results[i]
+                user_id = result['user_id']
+                ticker = result['ticker']
+                ticker_yahoo = yf.Ticker(ticker)
+                data = ticker_yahoo.history()
+                last_price = data['Close'].iloc[-1]
+                average_price = float(result['average_price'])
+                quantity = float(result['quantity'])
+
+                # calculate new record
+                market_value = quantity * last_price
+                open_pl = market_value - average_price * quantity
+
+                # update new record
+                await session.execute(f"""UPDATE game_rm_portfolio SET market_value = {market_value}
+                                                                               , quantity = {quantity}
+                                                                               , open_pl = {open_pl}
+                                                                               , open_pl_percent = {round(open_pl / 100, 2)}
+                                                                               , last_price = {last_price}
+                                                                               WHERE user_id = '{user_id}'
+                                                                               AND ticker = '{ticker}'""")
+
+            # update account
+            accounts = await session.execute(f"""SELECT * FROM game_rm_account""")
+            accounts = helpers.sql_to_dict(accounts)
+            for i in range(len(accounts)):
+                account = accounts[i]
+                user_id = account['user_id']
+                market_value = 0
+                cash_balance = account['cash_balance']
+                current_shares = defaultdict(lambda: 0, json.loads(account['current_shares']))
+                for ticker, share in current_shares.items():
+                    last_price =  await session.execute(f"""SELECT last_price from game_rm_portfolio 
+                                                   WHERE user_id = '{user_id}'
+                                                    AND ticker = '{ticker}'""")
+                    last_price = helpers.sql_to_dict(last_price)
+                    market_value += last_price[0]['last_price'] * share
+                # get the historical price table for one year for VaR
+                annual_price = get_hist_stock_price(list(current_shares.keys()),
+                                                    datetime.now(CONSTS.TIME_ZONE) - timedelta(days=365),
+                                                    datetime.now(CONSTS.TIME_ZONE))
+                current_weights = [current_shares[ticker] for ticker in annual_price.columns] # ? remove columns[:-1]
+                current_weights = [shares / sum(current_weights) for shares in current_weights]
+                current_portfolio = Portfolio(df=annual_price, weights=current_weights)
+                hist_var = current_portfolio.hvar()
+                p_var = current_portfolio.pvar()
+                monte_carlo_var = current_portfolio.monte_carlo_var()
+
+                await session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
+                                                                      , net_account_value = {cash_balance + market_value}
+                                                                      , market_value = {market_value}
+                                                                      , cash_balance = {cash_balance}
+                                                                      , hist_var = {hist_var}
+                                                                      , p_var = {p_var}
+                                                                      , monte_carlo_var = {monte_carlo_var}
+                                                                      , pl = {cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}
+                                                                      , pl_percent = {round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL) / 100, 2)}
+                                                                      WHERE user_id = '{user_id}'""")
+                # insert historical record
+                await session.execute(
+                    f"""INSERT INTO game_rm_records (user_id, date, net_account_value,market_value,cash_balance, pl,pl_percent,
+                                p_var,current_shares) 
+                                VALUES ('{user_id}',{current_time},'{cash_balance + market_value}',{market_value},'{cash_balance}',
+                                '{cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}',
+                                '{round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL) / 100, 2)}',
+                                '{p_var}',
+                                '{json.dumps(current_shares)}')""")
+
+
+
+
+@router.get("/rm_game/get_historical_records")
+async def get_historical_records(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    get historical records for this internal_user
+    """
+    async with helpers.mysql_session_scope() as session:
+        results = await session.execute(f"""SELECT * FROM game_rm_records WHERE internal_user.internal_sub_id""")
+        results = helpers.sql_to_dict(results)
+    return ResultResponse(status=0, result=results,
+                          message=f"Transaction succeed for user: {internal_user.username}",
+                          date_done=str(datetime.now(TIME_ZONE).isoformat()))
+
+
+@router.get("/rm_game/get_historical_net_account_value")
+async def get_historical_net_account_value(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    get a summary of all users' records
+    this is ONLY available for administrators (e.g. prof. Chen), i.e. we shall add an extra field to internal_user like 'type': student/GA/Administrator
+    """
+    async with helpers.mysql_session_scope() as session:
+        results = await session.execute(f"""SELECT user_id,date,net_account_value FROM game_rm_records""")
+        results = helpers.sql_to_dict(results)
+    return ResultResponse(status=0, result=results,
+                          message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
