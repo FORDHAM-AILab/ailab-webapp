@@ -1,23 +1,18 @@
 import torch
 
 
-def pso(func, lb, ub, args=(), kwargs={}, initial_guess=None,
+def pso(func, dimension, bounds=None, args=(), kwargs={}, initial_guess=None,
         particle_num=100, maxit=20, c1=0.5, c2=0.5, w=0.5,
         constraints_particle_adjust_func=None, cons_args=(), cons_kwargs={},
         device='cpu', verbose=False):
-    if type(lb) is not torch.Tensor:
-        lb = torch.tensor(lb, device=device)
-    if type(ub) is not torch.Tensor:
-        ub = torch.tensor(ub, device=device)
-    dimension = len(lb)
 
     if initial_guess is None:
-        X = lb + (ub - lb) * torch.rand(particle_num, dimension, device=device)
-    else:
-        if type(initial_guess) is torch.Tensor:
-            X = initial_guess
+        if bounds is None:
+            X = torch.rand(particle_num, dimension, device=device)
         else:
-            X = torch.tensor(initial_guess, device=device)
+            X = bounds[0] + (bounds[1] - bounds[0]) * torch.rand(particle_num, dimension, device=device)
+    else:
+        X = torch.tensor(initial_guess, device=device)
     V = torch.rand(particle_num, dimension, device=device)
 
     pbest = torch.clone(X)
