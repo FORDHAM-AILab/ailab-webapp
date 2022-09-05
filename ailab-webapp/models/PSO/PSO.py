@@ -52,11 +52,10 @@ def pso(func, lb, ub, args=(), kwargs={}, initial_guess=None,
 
 # With lower or upper bounds
 def bounded(X, lower_bound=None, upper_bound=None):
-    for x in X:
-        if lower_bound is not None:
-            X = torch.maximum(X, lower_bound)
-        if upper_bound is not None:
-            X = torch.minimum(X, upper_bound)
+    if lower_bound is not None:
+        X = torch.maximum(X, lower_bound)
+    if upper_bound is not None:
+        X = torch.minimum(X, upper_bound)
     return X
 
 
