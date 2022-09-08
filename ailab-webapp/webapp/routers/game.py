@@ -17,6 +17,8 @@ from collections import defaultdict
 from ..auth import schemes as auth_schemes
 from ..helpers import format_pct, format_digit, format_currency, round_result
 from ..webapp_models.generic_models import ResultResponse
+from fastapi_utils.tasks import repeat_every
+from starlette.concurrency import run_in_threadpool
 
 router = APIRouter(
     prefix="/game",
@@ -32,8 +34,8 @@ logger = logging.getLogger(__name__)
 @router.post("/rm_game/create_rm_game_user")
 async def create_rm_game_user(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
     current_time = datetime.now(TIME_ZONE).isoformat()
-    with helpers.mysql_session_scope() as session:
-        session.execute(
+    async with helpers.mysql_session_scope() as session:
+        await session.execute(
             f"""INSERT INTO game_rm_account (user_id, net_account_value,market_value,cash_balance, pl,pl_percent,
                 updated_at, created_at) 
                 VALUES ('{internal_user.internal_sub_id}',{CONSTS.GAME_RM_NOTIONAL},0,{CONSTS.GAME_RM_NOTIONAL},0,0,'{current_time}',
@@ -57,8 +59,8 @@ async def update_portfolio(request: Request,
         # ---------------------Market is open-----------------------#
         if helpers.checkMarketTime():
 
-            with helpers.mysql_session_scope() as session:
-                result_current = session.execute(f"""SELECT * FROM game_rm_account WHERE 
+            async with helpers.mysql_session_scope() as session:
+                result_current = await session.execute(f"""SELECT * FROM game_rm_account WHERE 
                                                      user_id = '{internal_user.internal_sub_id}' """)
                 if result_current.rowcount == 0:
                     raise Exception(f'User: {internal_user.username} not registered for the game')
@@ -112,10 +114,10 @@ async def update_portfolio(request: Request,
             # update buying_power
             buying_power = market_value * 0.8 + (cash_balance * 2 if cash_balance > 0 else cash_balance)
 
-            # update account, transaction and portfoliio info
-            with helpers.mysql_session_scope() as session:
+            # update account, transaction and portfolio info
+            async with helpers.mysql_session_scope() as session:
                 # update account
-                session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
+                await session.execute(f"""UPDATE game_rm_account SET updated_at = '{current_time}'
                                                            , net_account_value = {cash_balance + market_value}
                                                            , market_value = {market_value}
                                                            , cash_balance = {cash_balance}
@@ -129,16 +131,16 @@ async def update_portfolio(request: Request,
 
                 # record new trades request
                 for ticker, shares in new_transactions.items():
-                    session.execute(f"""INSERT INTO game_rm_transactions VALUES ('{uuid.uuid4()}', 
+                    await session.execute(f"""INSERT INTO game_rm_transactions VALUES ('{uuid.uuid4()}', 
                                         '{internal_user.internal_sub_id}','{current_time}', '{ticker}', {shares}, {new_prices[ticker]}, 'COMPLETED')""")
 
                 # calculate pnl for each specific ticker
                 for ticker, shares in new_shares.items():
-                    result_portfolio = session.execute(f"""SELECT * FROM game_rm_portfolio WHERE 
+                    result_portfolio = await session.execute(f"""SELECT * FROM game_rm_portfolio WHERE 
                                                                        user_id = '{internal_user.internal_sub_id}' 
                                                                        AND ticker = '{ticker}'""")
                     if result_portfolio.rowcount == 0:
-                        session.execute(f"""INSERT INTO game_rm_portfolio VALUES ('{internal_user.internal_sub_id}', 
+                        await session.execute(f"""INSERT INTO game_rm_portfolio VALUES ('{internal_user.internal_sub_id}', 
                                                         '{ticker}',{round(shares * new_prices[ticker], 2)}, {shares}, 0, 0,
                                                         {new_prices[ticker]},{new_prices[ticker]})""")
                     else:
@@ -154,7 +156,7 @@ async def update_portfolio(request: Request,
                             (average_price * quantity + new_price * (new_shares[ticker] - quantity)) / shares, 2)
 
                         open_pl = new_market_value - average_price * shares
-                        session.execute(f"""UPDATE game_rm_portfolio SET market_value = {new_market_value}
+                        await session.execute(f"""UPDATE game_rm_portfolio SET market_value = {new_market_value}
                                                                         , quantity = {shares}
                                                                         , open_pl = {open_pl}
                                                                         , open_pl_percent = {round(open_pl / 100, 2)}
@@ -181,8 +183,8 @@ async def get_transaction_history(internal_user: InternalUser = Depends(access_t
     :param internal_user: InternalUser class
     :return:
     """
-    with helpers.mysql_session_scope() as session:
-        result = session.execute(
+    async with helpers.mysql_session_scope() as session:
+        result = await session.execute(
             f"""SELECT transaction_id, ticker, shares, price, transaction_time FROM game_rm_transactions WHERE user_id='{internal_user.internal_sub_id}' 
                 ORDER BY transaction_time DESC""")
         result = helpers.sql_to_dict(result)
@@ -205,8 +207,8 @@ async def rank_players_rm(by: str = 'net_account_value'):
     :param by:
     :return:
     """
-    with helpers.mysql_session_scope() as session:
-        result = session.execute(
+    async with helpers.mysql_session_scope() as session:
+        result = await session.execute(
             f"""SELECT username, net_account_value FROM game_rm_account LEFT JOIN users 
                 ON game_rm_account.user_id = users.internal_sub_id ORDER BY {by} DESC""")
         result = helpers.sql_to_dict(result)
@@ -219,18 +221,18 @@ async def rank_players_rm(by: str = 'net_account_value'):
 
 @router.post("/rm_game/reset_game")
 async def reset_game(internal_user: InternalUser):
-    with helpers.mysql_session_scope() as session:
-        session.execute(f"""DELETE FROM game_rm_account WHERE user_id = '{internal_user.internal_sub_id}'""")
-        session.execute(f"""DELETE FROM game_rm_transactions WHERE user_id = '{internal_user.internal_sub_id}'""")
-        session.execute(f"""DELETE FROM game_rm_portfolio WHERE user_id = '{internal_user.internal_sub_id}'""")
+    async with helpers.mysql_session_scope() as session:
+        await session.execute(f"""DELETE FROM game_rm_account WHERE user_id = '{internal_user.internal_sub_id}'""")
+        await session.execute(f"""DELETE FROM game_rm_transactions WHERE user_id = '{internal_user.internal_sub_id}'""")
+        await session.execute(f"""DELETE FROM game_rm_portfolio WHERE user_id = '{internal_user.internal_sub_id}'""")
     return ResultResponse(status=0, message=f"Reset user: {internal_user.username} for RM game",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
 
 @round_result(CONSTS.PRICE_DECIMAL)
-def _get_user_account_info(internal_user: InternalUser) -> Union[dict, int]:
-    with helpers.mysql_session_scope() as session:
-        result = session.execute(
+async def _get_user_account_info(internal_user: InternalUser) -> Union[dict, int]:
+    async with helpers.mysql_session_scope() as session:
+        result = await session.execute(
             f"""SELECT * from game_rm_account WHERE user_id = "{internal_user.internal_sub_id}" """)
         result = helpers.sql_to_dict(result)
 
@@ -241,7 +243,7 @@ def _get_user_account_info(internal_user: InternalUser) -> Union[dict, int]:
 
 @router.get("/rm_game/get_user_account_info")
 async def get_user_account_info(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
-    result = _get_user_account_info(internal_user)
+    result = await _get_user_account_info(internal_user)
     if result == -1:
         return ResultResponse(status=-2, result=result,
                               message=f"User hasn't joined the game",
@@ -260,18 +262,18 @@ async def get_user_account_info(internal_user: InternalUser = Depends(access_tok
 
 
 @round_result(CONSTS.PRICE_DECIMAL)
-def _get_user_position(internal_user: InternalUser) -> List[dict]:
-    with helpers.mysql_session_scope() as session:
-        result = session.execute(
+async def _get_user_position(internal_user: InternalUser) -> List[dict]:
+    async with helpers.mysql_session_scope() as session:
+        coroutine = await session.execute(
             f"""SELECT * from game_rm_portfolio WHERE user_id = "{internal_user.internal_sub_id}" """)
-        result = helpers.sql_to_dict(result)
+        result = helpers.sql_to_dict(coroutine)
 
     return result
 
 
 @router.get("/rm_game/get_user_position")
 async def get_user_position(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
-    result = _get_user_position(internal_user)
+    result = await _get_user_position(internal_user)
     rows = []
 
     for row in result:
@@ -286,4 +288,104 @@ async def get_user_position(internal_user: InternalUser = Depends(access_token_c
 
     return ResultResponse(status=0, result=rows,
                           message=f"Found user: {internal_user.username}'s current account info",
+                          date_done=str(datetime.now(TIME_ZONE).isoformat()))
+
+
+# repeat every hour
+@router.on_event('startup')
+@repeat_every(seconds=60 * 60)
+@router.get("/rm_game/create_eod_records")
+async def create_eod_records(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    insert the end of day records for all game users
+    """
+    import pandas_market_calendars as mcal
+    import datetime
+    import yfinance as yf
+    try:
+        now = datetime.datetime.now(CONSTS.TIME_ZONE)
+        nyse = mcal.get_calendar('NYSE')
+        market_days = nyse.valid_days(start_date=now, end_date=now, tz=CONSTS.TIME_ZONE)
+        current_time = datetime.datetime.now(CONSTS.TIME_ZONE).isoformat()
+        # If market day
+        if now.strftime('%Y-%m-%d') in market_days:
+            async with helpers.mysql_session_scope() as session:
+                accounts = await session.execute(f"""SELECT * FROM game_rm_account""")
+                accounts = helpers.sql_to_dict(accounts)
+                # iterate all users
+                for i in range(len(accounts)):
+                    account = accounts[i]
+                    user_id = account['user_id']
+                    cash_balance = account['cash_balance']
+                    current_shares = defaultdict(lambda: 0, json.loads(account['current_shares']))
+                    record = await run_in_threadpool(calculate_eod_records(current_shares))
+                    market_value = record['market_value']
+                    p_var = record['p_var']
+                    # insert historical record
+                    await session.execute(
+                        f"""INSERT INTO game_rm_records (user_id, date, net_account_value,market_value,cash_balance, pl,pl_percent,
+                                    p_var,current_shares) 
+                                    VALUES ('{user_id}',{current_time},'{cash_balance + market_value}',{market_value},'{cash_balance}',
+                                    '{cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}',
+                                    '{round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL) / 100, 2)}',
+                                    '{p_var}',
+                                    '{json.dumps(current_shares)}')""")
+
+    except:
+        pass
+
+
+def calculate_eod_records(current_shares):
+    """
+    calculate end of day records for all game users
+    """
+    # get the historical price table for one year for VaR
+    import yfinance as yf
+    market_value = 0
+    record = dict()
+    for ticker, share in current_shares.items():
+        ticker_yahoo = yf.Ticker(ticker)
+        data = ticker_yahoo.history()
+        last_price = data['Close'].iloc[-1]
+        market_value += last_price * share
+
+    annual_price = get_hist_stock_price(list(current_shares.keys()),
+                                        datetime.now(CONSTS.TIME_ZONE) - timedelta(days=365),
+                                        datetime.now(CONSTS.TIME_ZONE))
+    current_weights = [current_shares[ticker] for ticker in annual_price.columns[:-1]]
+    current_weights = [shares / sum(current_weights) for shares in current_weights]
+    current_portfolio = Portfolio(df=annual_price, weights=current_weights)
+
+    record['market_value'] = market_value
+    record['p_var'] = current_portfolio.pvar()
+    return record
+
+
+
+
+
+@router.get("/rm_game/get_historical_records")
+async def get_historical_records(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    get historical records for this internal_user
+    """
+    async with helpers.mysql_session_scope() as session:
+        results = await session.execute(f"""SELECT * FROM game_rm_records WHERE internal_user.internal_sub_id""")
+        results = helpers.sql_to_dict(results)
+    return ResultResponse(status=0, result=results,
+                          message=f"Transaction succeed for user: {internal_user.username}",
+                          date_done=str(datetime.now(TIME_ZONE).isoformat()))
+
+
+@router.get("/rm_game/get_historical_net_account_value")
+async def get_historical_net_account_value(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
+    """
+    get a summary of all users' records
+    this is ONLY available for administrators (e.g. prof. Chen), i.e. we shall add an extra field to internal_user like 'type': student/GA/Administrator
+    """
+    async with helpers.mysql_session_scope() as session:
+        results = await session.execute(f"""SELECT user_id,date,net_account_value FROM game_rm_records""")
+        results = helpers.sql_to_dict(results)
+    return ResultResponse(status=0, result=results,
+                          message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))

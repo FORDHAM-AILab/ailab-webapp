@@ -16,8 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
 
-from .config import env
-
+from webapp.config import env
 app = FastAPI()
 
 app.include_router(auth.router)
@@ -93,8 +92,8 @@ def test():
 
 
 @app.get("/test/test_db", tags=['test'])
-def test_db():
-    with helpers.mysql_session_scope() as session:
+async def test_db():
+    async with helpers.mysql_session_scope() as session:
         result = session.execute(f"""SELECT * FROM users limit 10 """)
         result = helpers.sql_to_dict(result)
 

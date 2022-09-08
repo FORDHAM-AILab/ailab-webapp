@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from functools import wraps
 import copy
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 
 from sqlalchemy.orm import scoped_session
 from . import mysql_session_factory, CONSTS
@@ -43,8 +43,8 @@ def standard_response(function):
     return wrapper
 
 
-def format_currency(num: Optional[Union[int, float]]):
-    return None if num is None or np.isnan(num) or np.isinf(num) else f'${num:,}'
+def format_currency(num: Optional[Union[int, float]], decimal=CONSTS.PRICE_DECIMAL):
+    return None if num is None or np.isnan(num) or np.isinf(num) else str(round(num, decimal))
 
 
 def format_pct(num: Optional[Union[int, float]], decimal=CONSTS.PRICE_DECIMAL):
@@ -110,7 +110,7 @@ def round_result(decimal: int = 4):
         @wraps(func)
         def round_wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-            if isinstance(result, float):
+            if isinstance(result, float) or isinstance(result, Decimal):
                 return round_digit(result, decimal)
             elif isinstance(result, (dict, list)):
                 return round_nested_dict_list(result, decimal)
@@ -161,17 +161,24 @@ def checkMarketTime(now=None):
 # ---------------------- SQL Related... ----------------------
 
 def sql_to_dict(result_proxy) -> List[dict]:
-    return [dict(row) for row in result_proxy]
+    result = []
+    for row in result_proxy:
+        row_dict = dict(row)
+        for k, v in row_dict.items():
+            if type(v) == Decimal:
+                row_dict[k] = float(v)
+        result.append(row_dict)
+    return result
 
 
-@contextmanager
-def mysql_session_scope():
+@asynccontextmanager
+async def mysql_session_scope():
     session = scoped_session(mysql_session_factory)
     try:
         yield session
-        session.commit()
+        await session.commit()
     except:
-        session.rollback()
+        await session.rollback()
         raise
     finally:
-        session.close()
+        await session.close()
