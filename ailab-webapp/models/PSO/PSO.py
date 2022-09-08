@@ -15,7 +15,7 @@ def pso(func, dimension, bounds=None, args=(), kwargs={}, initial_guess=None,
         X = torch.tensor(initial_guess, device=device)
     V = torch.rand(particle_num, dimension, device=device)
 
-    pbest = torch.clone(X)
+    pbest = X
     pbest_obj = torch.tensor([func(x, *args, **kwargs) for x in X], device=device)
     gbest = pbest[0]
     gbest_obj = torch.tensor(float('inf'), device=device)
@@ -75,4 +75,12 @@ def monotonic(X, if_mono_increasing: bool, left_step=True):
                 for i in range(1, len(x)):
                     if x[-i] > x[-(i+1)]:
                         x[-(i + 1)] = x[-i]
+    return X
+
+
+def defined_head_or_tail(X, if_head: bool, value):
+    if if_head:
+        X[:, 0] = value
+    else:
+        X[:, -1] = value
     return X
