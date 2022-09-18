@@ -17,6 +17,10 @@ from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
 
 from webapp.config import env
+import asyncio
+from fastapi_utils.tasks import repeat_every
+import time
+
 app = FastAPI()
 
 app.include_router(auth.router)
@@ -119,6 +123,11 @@ async def info():
         'env': env
     }
 
+@app.on_event('startup')
+@repeat_every(seconds=60)
+@app.get("/test/async", tags=['test'])
+async def asynctest():
+    await asyncio.sleep(60)
 
 if __name__ == '__main__':
     uvicorn.run('app:app', port=8888, host='127.0.0.1', log_level="info", reload=True)
