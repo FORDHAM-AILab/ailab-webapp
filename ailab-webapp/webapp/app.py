@@ -15,8 +15,9 @@ from fastapi import Request
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
-
+from webapp.worker import tasks
 from webapp.config import env
+from webapp.worker import celery_app
 app = FastAPI()
 
 app.include_router(auth.router)
@@ -118,6 +119,16 @@ async def info():
     return {
         'env': env
     }
+
+
+@app.get('/test/test_celery', tags=['test'])
+async def test_celery():
+    return tasks.test_celery(10)
+
+
+@app.get('/celery/get_task_status/{task_id}', tags=['celery'])
+async def get_task_status(task_id) -> dict:
+    return celery_app.get_task_info(task_id)
 
 
 if __name__ == '__main__':

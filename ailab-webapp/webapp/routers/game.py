@@ -291,8 +291,7 @@ async def get_user_position(internal_user: InternalUser = Depends(access_token_c
     return ResultResponse(status=0, result=rows,
                           message=f"Found user: {internal_user.username}'s current account info",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
-
-
+@repeat_every()
 @router.on_event('startup')
 @router.get("/rm_game/create_eod_records")
 async def create_eod_records(internal_user: InternalUser = Depends(access_token_cookie_scheme)):
@@ -328,7 +327,7 @@ async def create_eod_records(internal_user: InternalUser = Depends(access_token_
                         user_id = account['user_id']
                         cash_balance = account['cash_balance']
                         current_shares = defaultdict(lambda: 0, json.loads(account['current_shares']))
-                        record = await run_in_threadpool(calculate_eod_records(current_shares))
+                        record = await run_in_threadpool(calculate_eod_records, current_shares=current_shares)
                         market_value = record['market_value']
                         net_account_value_today = cash_balance + market_value
                         net_account_value_history = await session.execute(f"""SELECT net_account_value FROM game_rm_records 
@@ -337,7 +336,7 @@ async def create_eod_records(internal_user: InternalUser = Depends(access_token_
                             net_account_value_history = helpers.sql_to_dict(net_account_value_history)
                             net_account_value_history = np.array([sub['net_account_value'] for sub in net_account_value_history])
                             sharpe_ratio = await run_in_threadpool(
-                                calculate_eod_sharpe_ratio(net_account_value_today, net_account_value_history))
+                                calculate_eod_sharpe_ratio, net_account_value_today, net_account_value_history)
                         else:
                             sharpe_ratio = None
 
@@ -361,8 +360,8 @@ async def create_eod_records(internal_user: InternalUser = Depends(access_token_
             else:
                 await asyncio.sleep((future-t).total_seconds())
 
-        except:
-            pass
+        except Exception as e:
+            print(f"{str(e)}:\n{traceback.format_exc()}")
 
 
 def calculate_eod_records(current_shares):
