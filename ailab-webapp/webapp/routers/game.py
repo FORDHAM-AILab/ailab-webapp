@@ -296,7 +296,6 @@ async def get_user_position(internal_user: InternalUser = Depends(access_token_c
                           message=f"Found user: {internal_user.username}'s current account info",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
-
 @router.on_event('startup')
 @schedule_task(scheduleHour=16)
 @router.get("/rm_game/create_eod_records")
@@ -311,18 +310,18 @@ async def create_eod_records(internal_user: InternalUser = Depends(access_token_
         now = datetime.datetime.now(CONSTS.TIME_ZONE)
         nyse = mcal.get_calendar('NYSE')
         market_days = nyse.valid_days(start_date=now, end_date=now, tz=CONSTS.TIME_ZONE)
-        refreshTime = datetime.time(hour=23, minute=30, second=0)
+        refreshTime = datetime.time(hour=23, minute=59, second=59)
         closeTime = datetime.time(hour=16, minute=0, second=0)
         current_time = datetime.datetime.now(CONSTS.TIME_ZONE).isoformat()
         async with helpers.mysql_session_scope() as session:
             date_history = await session.execute(f"""SELECT date FROM game_rm_records""")
             if date_history is not None:
                 date_history = helpers.sql_to_dict(date_history)
-                date_history = [sub['date'].strftime('%Y-%m-%d') for sub in date_history]
+                date_history = [sub['date'].isoformat() for sub in date_history]
             else:
                 date_history = []
-        # If market day, no duplicated date, after 16:00 and before 23:30
-        if (now.strftime('%Y-%m-%d') in market_days) and (now.strftime('%Y-%m-%d') not in date_history) and (now.time() >= closeTime) and (now.time() < refreshTime):
+        # If market day, no duplicated date, after 16:00 and before 23:59:59
+        if (now.strftime('%Y-%m-%d') in market_days) and (now.strftime('%Y-%m-%d') not in date_history) and (now.time() > closeTime) and (now.time() < refreshTime):
             async with helpers.mysql_session_scope() as session:
                 accounts = await session.execute(f"""SELECT * FROM game_rm_account""")
                 accounts = helpers.sql_to_dict(accounts)
@@ -331,33 +330,32 @@ async def create_eod_records(internal_user: InternalUser = Depends(access_token_
                     account = accounts[i]
                     user_id = account['user_id']
                     cash_balance = account['cash_balance']
-                    if account['current_shares'] is None:
-                        continue
                     current_shares = defaultdict(lambda: 0, json.loads(account['current_shares']))
-                    record = await run_in_threadpool(calculate_eod_records,current_shares)
+                    record = await run_in_threadpool(calculate_eod_records, current_shares=current_shares)
                     market_value = record['market_value']
                     net_account_value_today = cash_balance + market_value
                     net_account_value_history = await session.execute(f"""SELECT net_account_value FROM game_rm_records 
-                                                                                WHERE user_id='{user_id}'""")
-                    net_account_value_history = helpers.sql_to_dict(net_account_value_history)
-                    if len(net_account_value_history)!=0 :
+                                                                                WHERE user_id={user_id}""")
+                    if net_account_value_history is not None:
+                        net_account_value_history = helpers.sql_to_dict(net_account_value_history)
                         net_account_value_history = np.array([sub['net_account_value'] for sub in net_account_value_history])
                         sharpe_ratio = await run_in_threadpool(
-                            calculate_eod_sharpe_ratio,net_account_value_today, net_account_value_history)
+                            calculate_eod_sharpe_ratio, net_account_value_today, net_account_value_history)
                     else:
-                        sharpe_ratio = 'Null'
+                        sharpe_ratio = None
 
                     p_var = record['p_var']
                     # insert historical record
                     await session.execute(
                         f"""INSERT INTO game_rm_records (user_id, date, net_account_value,market_value,cash_balance, pl,pl_percent,
                                     p_var,current_shares,sharpe_ratio) 
-                                    VALUES ('{user_id}','{current_time}',{net_account_value_today},{market_value},{cash_balance},
-                                    {cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL},
-                                    {round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL) / 100, 2)},
-                                    {p_var},
+                                    VALUES ('{user_id}',{current_time},'{net_account_value_today}',{market_value},'{cash_balance}',
+                                    '{cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}',
+                                    '{round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL) / 100, 2)}',
+                                    '{p_var}',
                                     '{json.dumps(current_shares)}',
                                     '{sharpe_ratio}')""")
+
 
 
     except Exception as e:

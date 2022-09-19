@@ -15,11 +15,12 @@ from fastapi import Request
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
-
+from webapp.worker import tasks
 from webapp.config import env
 import asyncio
 from fastapi_utils.tasks import repeat_every
 import time
+from webapp.worker import celery_app
 
 app = FastAPI()
 
@@ -128,6 +129,16 @@ async def info():
 # @app.get("/test/async", tags=['test'])
 # async def asynctest():
 #     await asyncio.sleep(60)
+
+@app.get('/test/test_celery', tags=['test'])
+async def test_celery():
+    return tasks.test_celery(10)
+
+
+@app.get('/celery/get_task_status/{task_id}', tags=['celery'])
+async def get_task_status(task_id) -> dict:
+    return celery_app.get_task_info(task_id)
+
 
 if __name__ == '__main__':
     uvicorn.run('app:app', port=8888, host='127.0.0.1', log_level="info", reload=True)
