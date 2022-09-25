@@ -7,6 +7,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from transformers import PegasusTokenizer, PegasusForConditionalGeneration
 
 import re
+import pandas as pd
 
 
 # Loughran and McDonald Financial Sentiment
@@ -38,7 +39,7 @@ def sentiment_analyzer_news(texts):
             neg_score += result[0]['score']
 
     score = (pos_score - neg_score) / len(texts)
-    return {'positive_count': pos_count, 'negative_count': neg_count, 'score': score}
+    return {'positive_count': pos_count, 'negative_count': neg_count, 'score': round(score, 4)}
 
 
 # News headlines or short posts
@@ -59,8 +60,8 @@ def sentiment_analyzer_finbert(texts):
         neg_score += float(scores[0][1])
         neu_score += float(scores[0][2])
 
-    return {'positive': pos_score / texts_len, 'negative': neg_score / texts_len,
-            'neutral': neu_score / texts_len}
+    return {'positive': round(pos_score / texts_len, 4), 'negative': round(neg_score / texts_len, 4),
+            'neutral': round(neu_score / texts_len, 4)}
 
 
 def sentiment_analyzer_finbert_txt(input_text):
@@ -154,12 +155,14 @@ def news_analyzer(ticker=None):
     else:
         news = ds.get_stock_news(ticker)
 
-    return sentiment_analyzer_news(news), sentiment_analyzer_lm(' '.join(news)), \
-           sentiment_analyzer_finbert(news)
+    return {'fin_news_result': pd.Series(sentiment_analyzer_news(news)),
+            'lm_result': pd.Series(sentiment_analyzer_lm(' '.join(news))),
+            'finbert_result': pd.Series(sentiment_analyzer_finbert(news))}
 
 
 def txt_analyzer(input_text):
-    return sentiment_analyzer_finbert_txt(input_text), sentiment_analyzer_lm(input_text)
+    return {'finbert_result': sentiment_analyzer_finbert_txt(input_text),
+            'lm_result': sentiment_analyzer_lm(input_text)}
 
 
 def txt_summation(input_text):
