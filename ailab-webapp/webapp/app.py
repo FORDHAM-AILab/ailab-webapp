@@ -14,7 +14,7 @@ import uvicorn
 from fastapi import Request
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
-from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
+from webapp.routers import auth, aws, data, game, options, portfolio, stock, sentiment, users
 from webapp.worker import tasks
 from webapp.config import env
 import asyncio
@@ -31,6 +31,7 @@ app.include_router(game.router)
 app.include_router(options.router)
 app.include_router(portfolio.router)
 app.include_router(stock.router)
+app.include_router(sentiment.router)
 app.include_router(users.router)
 
 # TODO: cache the current object

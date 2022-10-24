@@ -15,6 +15,8 @@ router = APIRouter(
 async def get_recent_news_sentiment():
     try:
         result = news_analyzer()
+        for k, v in result.items():
+            result[k] = v.to_json(orient='records')
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status=0, result=result)
