@@ -1,22 +1,45 @@
-from finvizfinance.news import News
-from finvizfinance.quote import finvizfinance
+import pandas as pd
 import snscrape.modules.twitter as sntwitter
 import snscrape.modules.reddit as snreddit
+from finvizfinance.util import web_scrap
 
 
 # Getting recent financial news headlines
 def get_news():
-    news = News().get_news()['news']
-    news_headlines = news['Title']
-    return news_headlines
+    NEWS_URL = "https://finviz.com/news.ashx"
+
+    news_content = web_scrap(NEWS_URL).find(id="news").find("table")
+    news_collection = news_content.findAll("tr", recursive=False)[1]
+
+    rows = news_collection.findAll("table")[0].findAll("tr")
+
+    titles = []
+    for row in rows:
+        cols = row.findAll("td")
+        if len(cols) < 3:
+            continue
+        title = cols[2].text
+        titles.append(title)
+
+    return pd.Series(titles)
 
 
 # Getting recent news headlines of a given stock
-def get_stock_news(stock_name):
-    stock = finvizfinance(stock_name)
-    news = stock.ticker_news()
-    news_headlines = news['Title']
-    return news_headlines
+def get_stock_news(ticker):
+    QUOTE_URL = "https://finviz.com/quote.ashx?t={}".format(ticker)
+
+    fullview_news_outer = web_scrap(QUOTE_URL).find("table", class_="fullview-news-outer")
+    rows = fullview_news_outer.findAll("tr")
+
+    titles = []
+    for row in rows:
+        cols = row.findAll("td")
+        if len(cols) < 2:
+            continue
+        title = cols[1].a.text
+        titles.append(title)
+
+    return pd.Series(titles)
 
 
 # Getting Twitter data
@@ -43,8 +66,11 @@ def get_reddits(search_requirement, max_reddits=100):
 
 
 if __name__ == '__main__':
-    requirement = 'apple stock within_time:1d lang:en'
-    result = get_tweets(requirement)
-    for i in result:
-        print(i)
-        print('-------------------')
+    print(get_news())
+
+    # requirement = 'apple stock within_time:1d lang:en'
+    # result = get_tweets(requirement)
+    # for i in result:
+    #     print(i)
+    #     print('-------------------')
+    

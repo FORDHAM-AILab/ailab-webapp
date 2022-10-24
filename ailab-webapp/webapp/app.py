@@ -17,7 +17,11 @@ from starlette.responses import JSONResponse
 from webapp.routers import auth, aws, data, game, options, portfolio, stock, users
 from webapp.worker import tasks
 from webapp.config import env
+import asyncio
+from fastapi_utils.tasks import repeat_every
+import time
 from webapp.worker import celery_app
+
 app = FastAPI()
 
 app.include_router(auth.router)
@@ -120,6 +124,11 @@ async def info():
         'env': env
     }
 
+# @app.on_event('startup')
+# @repeat_every(seconds=60)
+# @app.get("/test/async", tags=['test'])
+# async def asynctest():
+#     await asyncio.sleep(60)
 
 @app.get('/test/test_celery', tags=['test'])
 async def test_celery():

@@ -41,6 +41,7 @@ Jinja2==3.1.2
 jmespath==1.0.1
 joblib==1.1.0
 kombu==5.2.4
+pyjwt==2.4.0
 korean-lunar-calendar==0.2.1
 langcodes==3.3.0
 lxml==4.9.1
@@ -64,7 +65,12 @@ prompt-toolkit==3.0.31
 pycparser==2.21
 pydantic==1.9.1
 pyee==8.2.2
-PyJWT==2.4.0
+Py
+
+
+
+
+==2.4.0
 pyluach==2.0.0
 pymongo==4.1.1
 PyMySQL==1.0.2
