@@ -196,6 +196,17 @@ async def mysql_session_scope():
     finally:
         await session.close()
 
+
+def _read_sql(con, stmt):
+    return pd.read_sql(stmt, con)
+
+
+async def get_df(stmt, engine) -> pd.DataFrame:
+    async with engine.begin() as conn:
+        data = await conn.run_sync(_read_sql, stmt)
+    return data
+
+
 def schedule_task(
     *,
     scheduleHour: int,

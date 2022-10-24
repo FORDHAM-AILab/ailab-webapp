@@ -7,6 +7,8 @@ from sqlalchemy import create_engine
 from .. import config
 from ..data.stock import get_top_gainers, get_top_losers, get_hist_stock_price, get_single_hist_price
 from ..webapp_models.generic_models import ResultResponse, CDSData
+from ..helpers import get_df
+from webapp import engine
 import numpy as np
 import pandas as pd
 
@@ -54,7 +56,6 @@ def load_full_hist_stock_price(ticker, start_date, end_date):
 
 @router.post("/data_warehouse/get_cds_data")
 def get_cds_data(requestBody: CDSData):
-    mysql_engine = create_engine(config.MYSQL_CONNECTION_URL)
     try:
         requestBody = requestBody.dict()
         region_query = f"""REGION in ({', '.join(f'"{w}"' for w in requestBody['REGION'])}) """ if requestBody[
@@ -73,7 +74,7 @@ def get_cds_data(requestBody: CDSData):
         where_clause = 'WHERE ' + conditions if conditions != '' else ''
         limit = f'limit {requestBody["limit"]}' if requestBody["limit"] else ""
         query = "SELECT * from fermi_db.cds " + where_clause + limit
-        df = pd.read_sql(query, mysql_engine)
+        df = await get_df(query, engine)
         df.replace({np.nan: None}, inplace=True)
         result = df.to_json(orient="records")
 
@@ -84,12 +85,11 @@ def get_cds_data(requestBody: CDSData):
 
 @router.get("/data_warehouse/cds_get_unique_val/{param}")
 def cds_get_unique_val(param: str):
-    mysql_engine = create_engine(config.MYSQL_CONNECTION_URL)
 
     try:
 
         query = f"SELECT DISTINCT {param} from fermi_db.cds"
-        df = pd.read_sql(query, mysql_engine)
+        df = await get_df(query, engine)
         result = list(df[param])
 
     except Exception as e:
