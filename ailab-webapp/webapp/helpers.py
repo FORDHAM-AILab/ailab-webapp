@@ -197,14 +197,9 @@ async def mysql_session_scope():
         await session.close()
 
 
-def _read_sql(con, stmt):
-    return pd.read_sql(stmt, con)
-
-
-async def get_df(stmt, engine) -> pd.DataFrame:
-    async with engine.begin() as conn:
-        data = await conn.run_sync(_read_sql, stmt)
-    return data
+async def read_sql_async(stmt, con):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, pd.read_sql, stmt, con)
 
 
 def schedule_task(

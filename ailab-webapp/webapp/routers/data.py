@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from .. import config
 from ..data.stock import get_top_gainers, get_top_losers, get_hist_stock_price, get_single_hist_price
 from ..webapp_models.generic_models import ResultResponse, CDSData
-from ..helpers import get_df
+from ..helpers import read_sql_async, mysql_session_scope, sql_to_dict
 from webapp import engine
 import numpy as np
 import pandas as pd
@@ -55,7 +55,7 @@ def load_full_hist_stock_price(ticker, start_date, end_date):
 
 
 @router.post("/data_warehouse/get_cds_data")
-def get_cds_data(requestBody: CDSData):
+async def get_cds_data(requestBody: CDSData):
     try:
         requestBody = requestBody.dict()
         region_query = f"""REGION in ({', '.join(f'"{w}"' for w in requestBody['REGION'])}) """ if requestBody[
@@ -74,9 +74,11 @@ def get_cds_data(requestBody: CDSData):
         where_clause = 'WHERE ' + conditions if conditions != '' else ''
         limit = f'limit {requestBody["limit"]}' if requestBody["limit"] else ""
         query = "SELECT * from fermi_db.cds " + where_clause + limit
-        df = await get_df(query, engine)
-        df.replace({np.nan: None}, inplace=True)
-        result = df.to_json(orient="records")
+        async with mysql_session_scope() as session:
+            result = await session.execute(query)
+            result = sql_to_dict(result)
+        # df.replace({np.nan: None}, inplace=True)
+        # result = df.to_json(orient="records")
 
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
@@ -84,13 +86,15 @@ def get_cds_data(requestBody: CDSData):
 
 
 @router.get("/data_warehouse/cds_get_unique_val/{param}")
-def cds_get_unique_val(param: str):
+async def cds_get_unique_val(param: str):
 
     try:
 
         query = f"SELECT DISTINCT {param} from fermi_db.cds"
-        df = await get_df(query, engine)
-        result = list(df[param])
+        async with mysql_session_scope() as session:
+            result = await session.execute(query)
+            result = sql_to_dict(result)
+            result = [d[param] for d in result]
 
     except Exception as e:
         return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
