@@ -44,8 +44,9 @@ HTTP_ORIGIN = ['http://127.0.0.1:8888',
                'http://localhost:3000',
                'http://localhost:8888',
                'http://127.0.0.1:3000',
-               'http://150.108.20.30:80',
-               'http://150.108.20.30',
+               'https://150.108.20.30',
+               'https://150.108.20.30:80',
+               'https://150.108.20.30:443',
                'https://ace-fermi01.ds.fordham.edu/',
                'https://ace-fermi01.ds.fordham.edu']
 app.add_middleware(
