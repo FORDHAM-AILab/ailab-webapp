@@ -1,0 +1,83 @@
+version: "1"
+services:
+  web:
+    build: .
+    ports:
+      - "8888:8888"
+    environment:
+      - ENV=dev
+    volumes:
+      - ".:/fermi_backend:rw"
+    depends_on:
+      - rabbitmq
+      - redis
+      - celery-flower
+      - celery-worker
+    expose:
+      - "8888"
+    network_mode: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  redis:
+    image: redis:7.0.5
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=redis_pwd0123
+    volumes:
+      - ".:/fermi_backend:rw"
+    expose:
+      - "6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "4369:4369"
+      - "5672:5672"
+      - "25672:25672"
+      - "15672:15672"
+    volumes:
+      - ".:/fermi_backend:rw"
+    environment:
+    - RABBITMQ_DEFAULT_USER=guest
+    - RABBITMQ_DEFAULT_PASS=guest
+    expose:
+      - "5672"
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "5672" ]
+      interval: 5s
+      timeout: 15s
+      retries: 1
+
+  celery-flower:
+    image: gregsi/latest-celery-flower-docker:latest
+    ports:
+      - "5555:5555"
+    environment:
+      - FLOWER_PORT=5555
+      - AMQP_USERNAME=guest
+      - AMQP_PASSWORD=guest
+      - AMQP_PORT=5672
+      - AMQP_ADMIN_HOST=rabbitmq
+      - AMQP_ADMIN_PORT=15672
+      - FLOWER_BASIC_AUTH=guest:guest
+    depends_on:
+      - rabbitmq
+      - redis
+    expose:
+      - "5555"
+
+  celery-worker:
+    build: .
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - ".:/fermi_backend:rw"
+
+    command: >
+      sh -c "cd fermi_backend/webapp &&
+             celery -A worker.celery_app.celery_app worker --loglevel=info"
