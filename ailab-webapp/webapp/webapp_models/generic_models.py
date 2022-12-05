@@ -42,3 +42,10 @@ class CDSData(BaseModel):
     CURRENCY: list = None
     limit: int = 100
 
+class ESGData(BaseModel):
+    REGION: list = None
+    INDUSTRY: list = None
+    OBLIGATION_ASSETRANK: list = None
+    CREDIT_EVENTS: list = None
+    CURRENCY: list = None
+    limit: int = 100

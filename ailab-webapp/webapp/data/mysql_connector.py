@@ -26,3 +26,24 @@ if __name__ == '__main__':
                     cursor.execute(sql, tuple(row))
                     conn.commit()
         print('Finished')
+
+    conn = msql.connect(host='localhost', user='root', database='esg',
+                        password='Tiger980330!')
+    if conn.is_connected():
+        cursor = conn.cursor()
+        path_to_dir = 'D:/esg/esg'
+        directory = os.fsencode(path_to_dir)
+        for file in os.listdir(directory):
+            filename = os.fsdecode(file)
+            if filename.endswith(".csv"):
+                df = pd.read_csv(os.path.join(path_to_dir, filename), skiprows=[0])
+                df.dropna(subset=['QUOTE_ID'], inplace=True)
+                df.drop_duplicates(subset=['QUOTE_ID'], inplace=True)
+                df = df.replace({np.nan: None})
+                print('importing file: ', filename)
+                for i, row in df.iterrows():
+                    str_format = '(' + ','.join((['%s'] * len(row))) + ')'
+                    sql = "INSERT INTO esg.ESGData VALUES " + str_format
+                    cursor.execute(sql, tuple(row))
+                    conn.commit()
+        print('Finished')
