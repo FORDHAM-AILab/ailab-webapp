@@ -42,6 +42,10 @@ else:
     BACKEND_URL = os.environ.get("BACKEND_URL_PROD", None)
     RESPONSE_COOKIE = ast.literal_eval(os.environ.get("RESPONSE_COOKIE_PROD", None))
 
+if bool(os.environ.get("DOCKER", True)):
+    REDIS_ENDPOINT=os.environ.get("REDIS_ENDPOINT_DOCKER")
+else:
+    REDIS_ENDPOINT = os.environ.get("REDIS_ENDPOINT")
 
 # Google login
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)

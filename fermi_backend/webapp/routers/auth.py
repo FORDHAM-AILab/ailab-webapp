@@ -123,7 +123,7 @@ async def login(response: JSONResponse, internal_user: InternalUser = Depends(au
         )
 
         # TODO: Make this a secure cookie for production use
-        response.set_cookie(key="access_token", value=f"Bearer {access_token}", **config.response_cookie)
+        response.set_cookie(key="access_token", value=f"Bearer {access_token}", **config.RESPONSE_COOKIE)
         response.headers['X-Authorization'] = f"Bearer {access_token}"
 
         return response

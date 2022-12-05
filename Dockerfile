@@ -10,4 +10,4 @@ COPY fermi_backend /app/fermi_backend
 
 EXPOSE 8888
 
-CMD ["uvicorn", "fermi_backend.webapp.main:app", "--host", "0.0.0.0", "--port", "8888"]
+CMD ["uvicorn", "fermi_backend.webapp.main:app", "--host", "0.0.0.0", "--port", "8888", "--reload"]
