@@ -11,7 +11,7 @@ from oauthlib.oauth2 import WebApplicationClient
 from starlette.responses import RedirectResponse
 
 from .. import cache
-from webapp import config
+from fermi_backend.webapp import config
 from ..exceptions import (
     DiscoveryDocumentError,
     ProviderConnectionError,

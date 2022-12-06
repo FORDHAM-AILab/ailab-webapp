@@ -5,6 +5,8 @@ services:
       - "8888:8888"
     environment:
       - ENV=dev
+    env_file:
+      - .env
     volumes:
       - ".:/fermi_backend:rw"
     depends_on:
