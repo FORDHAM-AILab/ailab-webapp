@@ -61,7 +61,7 @@ def weights_optimization_api(requestbody: dict) -> ResultResponse:
     try:
         data, weights, expected_return = pd.DataFrame(requestbody['data']), requestbody['weights'], requestbody[
             'expected_return']
-        expected_return = None if requestbody['expected_return'] else float(expected_return)
+        expected_return = None if requestbody['expected_return'] == '' else float(expected_return)
 
         result = weights_optimization(data, weights, expected_return)
     except Exception as e:
