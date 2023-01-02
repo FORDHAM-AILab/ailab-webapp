@@ -26,7 +26,7 @@ MONGODB_COLLECTION = "testdb"
 MONGODB_DATABASE = "testdb"
 ENV = os.environ.get("ENV", "dev")
 if ENV == 'dev':
-    if bool(os.environ.get("DOCKER", True)):
+    if bool(os.environ.get("DOCKER", False)):
         MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL_DEV_DOCKER", None)
     else:
         MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL_DEV", None)
@@ -34,7 +34,7 @@ if ENV == 'dev':
     BACKEND_URL = os.environ.get("BACKEND_URL_DEV", None)
     RESPONSE_COOKIE = ast.literal_eval(os.environ.get("RESPONSE_COOKIE_DEV", None))
 else:
-    if bool(os.environ.get("DOCKER", True)):
+    if bool(os.environ.get("DOCKER", False)):
         MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL_PROD_DOCKER", None)
     else:
         MYSQL_CONNECTION_URL = os.environ.get("MYSQL_CONNECTION_URL_PROD", None)

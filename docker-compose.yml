@@ -27,8 +27,7 @@ services:
       - "6379:6379"
     environment:
       - REDIS_PASSWORD=redis_pwd0123
-    volumes:
-      - ".:/fermi_backend:rw"
+
     expose:
       - "6379"
     networks:
@@ -43,8 +42,7 @@ services:
       - "5672:5672"
       - "25672:25672"
       - "15672:15672"
-    volumes:
-      - ".:/fermi_backend:rw"
+
     environment:
     - RABBITMQ_DEFAULT_USER=guest
     - RABBITMQ_DEFAULT_PASS=guest
@@ -83,9 +81,6 @@ services:
     depends_on:
       - rabbitmq
       - redis
-    volumes:
-      - ".:/fermi_backend:rw"
-
     command: >
       sh -c "cd fermi_backend/webapp &&
              celery -A worker.celery_app.celery_app worker --loglevel=info"
