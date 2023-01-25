@@ -1,5 +1,5 @@
-from models.Sentiment import DataScraping as ds
-from models.Sentiment.Analysis import tweet_preprocess
+from fermi_backend.models.Sentiment import DataScraping as ds
+from fermi_backend.models.Sentiment.Analysis import tweet_preprocess
 
 from keybert import KeyBERT
 from keyphrase_vectorizers import KeyphraseCountVectorizer
