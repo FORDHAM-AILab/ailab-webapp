@@ -36,6 +36,8 @@ def get_stock_news(ticker):
         cols = row.findAll("td")
         if len(cols) < 2:
             continue
+        if cols[1].a is None:
+            continue
         title = cols[1].a.text
         titles.append(title)
 
@@ -65,12 +67,65 @@ def get_reddits(search_requirement, max_reddits=100):
     return reddits_list
 
 
-if __name__ == '__main__':
-    print(get_news())
+def convert_twitter_search(content=None, hashtag=None, cashtag=None, url=None, from_user=None, to_user=None,
+                           at_user=None, city=None, since=None, until=None, within_time=None):
+    """
+    :param content: search words
+    :param hashtag: #words
+    :param cashtag: $stock
+    :param url: contained url
+    :param from_user: sent by
+    :param to_user: reply to
+    :param at_user: @user
+    :param city: geotagged place (if me, then near:me)
+    :param since: on or after a specified date(yyyy-mm-dd)
+    :param until: before a specified date(yyyy-mm-dd)
+    :param within_time: within the last number of days, hours, minutes, or seconds
+    :return: search_requirement
+    """
 
-    # requirement = 'apple stock within_time:1d lang:en'
+    search_requirement = ''
+
+    if content is not None:
+        search_requirement = f'{content} '
+    if hashtag is not None:
+        search_requirement += f'{hashtag} '
+    if cashtag is not None:
+        search_requirement += f'{cashtag} '
+    if at_user is not None:
+        search_requirement += f'{at_user} '
+    if url is not None:
+        search_requirement += f'url:{url} '
+    if from_user is not None:
+        search_requirement += f'from:{from_user} '
+    if to_user is not None:
+        search_requirement += f'to:{to_user} '
+    if city is not None:
+        search_requirement += f'near:{city} '
+    if since is not None:
+        search_requirement += f'since:{since} '
+    if until is not None:
+        search_requirement += f'until:{until} '
+    if within_time is not None:
+        search_requirement += f'within_time:{within_time} '
+    search_requirement += 'lang:en'
+    return search_requirement
+
+
+if __name__ == '__main__':
+    # print(get_news())
+    # print(get_stock_news('aapl'))
+
+    # requirement = 'apple stock within_time:1d lang:en '
     # result = get_tweets(requirement)
     # for i in result:
     #     print(i)
     #     print('-------------------')
+
+    di = {'within_time': '1d', 'at_user': '@Youtube @Google'}
+    requirement = convert_twitter_search(**di)
+    result = get_tweets(requirement)
+    for i in result:
+        print(i)
+        print('-------------------')
     
