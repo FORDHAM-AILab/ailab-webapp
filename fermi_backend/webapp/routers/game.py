@@ -335,15 +335,26 @@ async def create_eod_records():
         # If market day, no duplicated date, after 16:00 and before 23:59:59
         if (now.strftime('%Y-%m-%d') in market_days) and (now.strftime('%Y-%m-%d') not in date_history) and (now.time() > closeTime) and (now.time() < refreshTime):
             async with helpers.mysql_session_scope() as session:
-                accounts = await session.execute(f"""SELECT * FROM game_rm_account""")
+                accounts = await session.execute(f"""SELECT * FROM game_rm_account;""")
                 accounts = helpers.sql_to_dict(accounts)
+                portfolio = await session.execute(f"""SELECT * FROM game_rm_portfolio;""")
+                portfolio = helpers.sql_to_dict(portfolio)
+                current_shares = {}
+                for row in portfolio:
+                    if row['user_id'] not in current_shares:
+                        current_shares[row['user_id']] = {row['ticker']: row['quantity']}
+                    else:
+                        current_shares[row['user_id']][row['ticker']] = row['quantity']
+
+
+
+
                 # iterate all users
                 for i in range(len(accounts)):
                     account = accounts[i]
                     user_id = account['user_id']
                     cash_balance = account['cash_balance']
-                    current_shares = defaultdict(lambda: 0, json.loads(account['current_shares']))
-                    record = await run_in_threadpool(calculate_eod_records, current_shares=current_shares)
+                    record = await run_in_threadpool(calculate_eod_records, current_shares=current_shares[user_id])
                     market_value = record['market_value']
                     net_account_value_today = cash_balance + market_value
                     net_account_value_history = await session.execute(f"""SELECT net_account_value FROM game_rm_records 
@@ -363,9 +374,9 @@ async def create_eod_records():
                                     p_var,current_shares,sharpe_ratio) 
                                     VALUES ('{user_id}',{current_time},'{net_account_value_today}',{market_value},'{cash_balance}',
                                     '{cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL}',
-                                    '{round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL) / 100, PRICE_DECIMAL)}',
+                                    '{round((cash_balance + market_value - CONSTS.GAME_RM_NOTIONAL) / CONSTS.GAME_RM_NOTIONAL, PRICE_DECIMAL)}',
                                     '{p_var}',
-                                    '{json.dumps(current_shares)}',
+                                    '{json.dumps(current_shares[user_id])}',
                                     '{sharpe_ratio}')""")
 
 
