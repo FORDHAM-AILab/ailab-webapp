@@ -83,13 +83,14 @@ async def update_portfolio(request: dict,
         market_value = float(current_account_info[0]['market_value'])
         cash_balance = float(current_account_info[0]['cash_balance'])
         # leverage allowed: cash can lend the same value as itself, stock can lend 0.8 times of its value
-        buying_power = float(current_account_info[0]['buying_power'])
+        buying_power = current_account_info[0]['buying_power']
+        buying_power = float(buying_power) if buying_power else market_value * 0.8 + (cash_balance * 2 if cash_balance > 0 else cash_balance)
         current_time = datetime.now(CONSTS.TIME_ZONE).isoformat()
 
         current_shares = {row['ticker']: row['quantity'] for row in current_portfolio}
         current_average = {row['ticker']: float(row['average_price']) for row in current_portfolio}
         # if the user didn't have any transaction before, i.e. current_shares dict is None, create empty defaultdict
-        if current_account_info[0]['current_shares'] is None:
+        if not current_shares:
             updated_shares = defaultdict(lambda: 0)
         # otherwise, modify from current's
         else:
@@ -155,10 +156,7 @@ async def update_portfolio(request: dict,
                                                     '{ticker}',{round(change_shares * new_prices[ticker], PRICE_DECIMAL)}, {change_shares}, 0, 0,
                                                     {new_prices[ticker]},{new_prices[ticker]})""")
                 else:
-                    result_portfolio = helpers.sql_to_dict(result_portfolio)
-
                     current_average_price = current_average[ticker]
-                    current_shares = current_shares[ticker]
 
                     new_price = new_prices[ticker]
                     new_market_value = change_shares * new_price
@@ -170,7 +168,7 @@ async def update_portfolio(request: dict,
                     else:
                         if change_shares > 0:
                             new_average_price = round(
-                                (current_average_price * current_shares + new_price * change_shares) / updated_shares[ticker], PRICE_DECIMAL)
+                                (current_average_price * current_shares[ticker] + new_price * change_shares) / updated_shares[ticker], PRICE_DECIMAL)
                         else:
                             new_average_price = current_average_price
 
