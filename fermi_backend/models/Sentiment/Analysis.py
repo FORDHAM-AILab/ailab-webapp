@@ -145,8 +145,8 @@ def sentiment_analyzer_twitter_xlm(texts):
         neu_score += float(scores[0][1])
         pos_score += float(scores[0][2])
 
-    return {'positive': pos_score / texts_len, 'negative': neg_score / texts_len,
-            'neutral': neu_score / texts_len}
+    return {'positive': round(pos_score / texts_len, 4), 'negative': round(neg_score / texts_len, 4),
+            'neutral': round(neu_score / texts_len, 4)}
 
 
 def news_analyzer(ticker=None):
@@ -175,10 +175,14 @@ def tweets_analyzer(search_requirement, tweets_num=None):
     else:
         tweets = ds.get_tweets(search_requirement, tweets_num)
 
+    if len(tweets) == 0:
+        return {'twitter_xlm': None, 'finbert': None}
+
     for i in range(len(tweets)):
         tweets[i] = tweet_preprocess(tweets[i])
 
-    return sentiment_analyzer_twitter_xlm(tweets), sentiment_analyzer_finbert(tweets)
+    return {'twitter_xlm': pd.Series(sentiment_analyzer_twitter_xlm(tweets)),
+            'finbert': pd.Series(sentiment_analyzer_finbert(tweets))}
 
 
 def reddits_analyzer(search_requirement, reddits_num=None):
@@ -191,7 +195,7 @@ def reddits_analyzer(search_requirement, reddits_num=None):
 
 
 if __name__ == '__main__':
-    print(news_analyzer())
+    # print(news_analyzer())
 
     # with open('/Users/alinluo/Desktop/Samples/sample news.txt', 'r') as f:
     #     texts = f.readlines()
@@ -201,7 +205,8 @@ if __name__ == '__main__':
     #
     # print(txt_summation(texts))
 
-    # requirement = 'google stock within_time:1d lang:en'
-    # print(tweets_analyzer(requirement, 10))
+    requirement = {'content': 'google stock', 'within_time': '1d'}
+    requirement = ds.convert_twitter_search(**requirement)
+    print(tweets_analyzer(requirement))
 
     # print(reddits_analyzer('google stock', 10))
