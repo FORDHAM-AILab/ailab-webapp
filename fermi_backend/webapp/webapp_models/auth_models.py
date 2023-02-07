@@ -17,3 +17,5 @@ class ExternalUser(BaseModel):
     email: str
     username: str
     external_sub_id: str
+
+

@@ -1,3 +1,5 @@
+from typing import Union
+
 from fastapi.security.utils import get_authorization_scheme_param
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Request
@@ -37,10 +39,9 @@ class AccessTokenCookieBearer():
 	"""
 	async def __call__(self, request: Request) -> InternalUser:
 		async with exception_handling():
-			internal_access_token: str = None
-			if not internal_access_token:
-				internal_access_token = request.headers['Authorization']
-			if not internal_access_token:
+
+			internal_access_token = request.headers['Authorization']
+			if not internal_access_token or internal_access_token == 'null':
 				raise UnauthorizedUser("Invalid access token cookie")
 			# Remove Bearer
 			internal_access_token = internal_access_token.split()[1]
@@ -64,5 +65,30 @@ class AuthTokenBearer():
 				raise UnauthorizedUser("Invalid authentication token")
 
 			internal_user = await auth_util.validate_internal_auth_token(internal_auth_token)
+
+			return internal_user
+
+
+class AuthUserType:
+	"""
+	schema that checks the type of login-ed user
+	"""
+
+	def __init__(self, role: Union[str, int]):
+		self.role = role
+
+
+	async def __call__(self, request: Request) -> str:
+		async with exception_handling():
+
+			internal_access_token = request.headers['Authorization']
+			if not internal_access_token:
+				raise UnauthorizedUser("Invalid access token cookie")
+			# Remove Bearer
+			internal_access_token = internal_access_token.split()[1]
+
+			internal_user = await auth_util.validate_internal_access_token(internal_access_token)
+
+
 
 			return internal_user

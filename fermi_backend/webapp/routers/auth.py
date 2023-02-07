@@ -51,7 +51,7 @@ async def login_redirect(auth_provider: str):
 @router.get("/google-login-callback/")
 async def google_login_callback(
         request: Request,
-        _=Depends(csrf_token_redirect_cookie_scheme)  # TODO: check this depends
+        _=Depends(csrf_token_redirect_cookie_scheme)
 ):
     """
     Callback triggered when the user logs in to Google's pop-up.

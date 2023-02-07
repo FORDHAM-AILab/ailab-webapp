@@ -15,3 +15,9 @@ class InternalUser(BaseModel):
     first_name: Optional[str]
     last_name: Optional[str]
     area_of_interest: Optional[str]
+
+
+class UserRole(BaseModel):
+    internal_sub_id: str
+    role: str
+    rank: int

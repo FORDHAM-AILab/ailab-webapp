@@ -14,14 +14,8 @@ import uvicorn
 from fastapi import Request
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import JSONResponse
-from fermi_backend.webapp.routers import auth, aws, data, game, options, portfolio, stock, sentiment, users
-from fermi_backend.webapp.worker import tasks
-from fermi_backend.webapp.config import ENV
+from fermi_backend.webapp.routers import auth, aws, data, game, options, portfolio, stock, sentiment, users, worker, tests
 
-import asyncio
-from fastapi_utils.tasks import repeat_every
-import time
-from fermi_backend.webapp.worker import celery_app
 
 app = FastAPI()
 
@@ -34,6 +28,8 @@ app.include_router(portfolio.router)
 app.include_router(stock.router)
 app.include_router(sentiment.router)
 app.include_router(users.router)
+app.include_router(worker.router)
+app.include_router(tests.router)
 
 # TODO: cache the current object
 
@@ -93,55 +89,6 @@ async def setup_request(request: Request, call_next) -> JSONResponse:
 #     return response
 
 
-@app.get("/app")
-def test():
-
-    return {'detail': 'suceed!!!'}
-
-
-@app.get("/test/test_db", tags=['test'])
-async def test_db():
-    async with helpers.mysql_session_scope() as session:
-        result = await session.execute(f"""SELECT * FROM users limit 10 """)
-        result = helpers.sql_to_dict(result)
-
-    return result
-
-
-@app.get("/test/test_cookies_set", tags=['test'])
-def test_cookies_set():
-    response = JSONResponse(content='Fake content')
-    response.set_cookie(key='test_key', value='test_value')
-    return response
-
-
-@app.get("/test/test_cookies_get", tags=['test'])
-def test_cookies_get(request: Request):
-
-    return request.cookies
-
-
-@app.get("/test/env_info", tags=['test'])
-async def env_info():
-    return {
-        'env': ENV
-    }
-
-# @app.on_event('startup')
-# @repeat_every(seconds=60)
-# @app.get("/test/async", tags=['test'])
-# async def asynctest():
-#     await asyncio.sleep(60)
-
-@app.get('/test/test_celery/{sleep}', tags=['test'])
-async def test_celery(sleep: int):
-    test_task = tasks.test_celery.delay(sleep)
-    return JSONResponse({"task_id": test_task.id})
-
-
-@app.get('/celery/get_task_status/{task_id}', tags=['celery'])
-async def get_task_status(task_id) -> dict:
-    return celery_app.get_task_info(task_id)
 
 
 if __name__ == '__main__':
