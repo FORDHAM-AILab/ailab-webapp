@@ -20,7 +20,7 @@ router = APIRouter(
 @router.get("/app")
 def test():
 
-    return {'detail': 'succeed!!!'}
+    return ResultResponse(status=0, message="Success")
 
 
 @router.get("/test_db", tags=['test'])
@@ -30,7 +30,7 @@ async def test_db():
             result = await session.execute(f"""SELECT * FROM cds limit 1 """)
             result = helpers.sql_to_dict(result)
         except Exception as e:
-            return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+            return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
 
     return ResultResponse(status=0, message=f"Successfully connected to DB!")
 
@@ -38,18 +38,19 @@ async def test_db():
 @router.get("/test_redis_cache", tags=['test'])
 async def test_redis_cache():
 
-    await cache.set("test", 'test_val')
-    test_val = await cache.get('test')
-    return test_val
+    try:
+        await cache.set("test", 'test_val')
+        test_val = await cache.get('test')
+        return ResultResponse(status=0, result=test_val)
+    except Exception as e:
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
 
 
 
 
 @router.get("/env_info", tags=['test'])
 async def env_info():
-    return {
-        'env': ENV
-    }
+    return ResultResponse(status=0, result=ENV)
 
 
 
