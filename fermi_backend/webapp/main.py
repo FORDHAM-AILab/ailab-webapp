@@ -17,7 +17,7 @@ from starlette.responses import JSONResponse
 from fermi_backend.webapp.routers import auth, aws, data, game, options, portfolio, stock, sentiment, users, worker, tests
 
 
-app = FastAPI()
+app = FastAPI(docs_url='/api/docs', openapi_url='/api/openapi.json')
 
 app.include_router(auth.router)
 app.include_router(aws.router)
