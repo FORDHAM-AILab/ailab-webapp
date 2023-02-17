@@ -31,6 +31,7 @@ else:
 logging.basicConfig(filename=f"{os.path.dirname(__file__)}/logging.log", level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
 app.include_router(auth.router)
 app.include_router(aws.router)
 app.include_router(data.router)
