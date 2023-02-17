@@ -19,7 +19,7 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse
 from fermi_backend.webapp.routers import auth, aws, data, game, options, portfolio, stock, sentiment, users, worker, tests
-from config import ENV
+from fermi_backend.webapp.config import ENV
 
 if ENV == 'prod':
     # root path as /api for behinding the proxy
@@ -28,7 +28,10 @@ else:
     app = FastAPI()
 
 # logging.config.fileConfig(fname=f"{os.path.dirname(__file__)}/logging.conf")
-logging.basicConfig(filename=f"{os.path.dirname(__file__)}/logging.log", level=logging.DEBUG)
+logging.basicConfig(filename=f"{os.path.dirname(__file__)}/logging.log", level=logging.DEBUG,
+                    format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                    datefmt='%H:%M:%S'
+                    )
 logger = logging.getLogger(__name__)
 
 
@@ -64,9 +67,24 @@ app.add_middleware(
 
 app.add_middleware(SessionMiddleware, secret_key='!secret')
 app.add_middleware(TrustedHostMiddleware)
-app.add_middleware(HTTPSRedirectMiddleware)
+# app.add_middleware(HTTPSRedirectMiddleware)
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    idem = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    logger.info(f"rid={idem} start request path={request.url.path}")
+    start_time = time.time()
 
+    response = await call_next(request)
+
+    process_time = (time.time() - start_time) * 1000
+    formatted_process_time = '{0:.2f}'.format(process_time)
+    if response.status_code > 400:
+        logger.error(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
+    else:
+        logger.info(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
+
+    return response
 
 @app.get("/")
 def home():

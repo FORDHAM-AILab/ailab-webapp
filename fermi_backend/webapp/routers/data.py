@@ -1,6 +1,6 @@
 import traceback
 from typing import List
-
+import logging
 from fastapi import APIRouter, Query
 from sqlalchemy import create_engine
 
@@ -17,6 +17,7 @@ router = APIRouter(
     tags=["data"]
 )
 
+logger = logging.getLogger(__name__)
 
 @router.get('/stock/get_top_gainers/{time_range}')
 def get_top_gainers_api(time_range):
@@ -24,7 +25,7 @@ def get_top_gainers_api(time_range):
         df = get_top_gainers(time_range)[['Symbol', 'Name', 'Price (Intraday)', '% Change']]
         result = df.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
     return ResultResponse(status=0, result=result)
 
 
