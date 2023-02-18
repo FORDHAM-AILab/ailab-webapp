@@ -23,7 +23,9 @@ from fermi_backend.webapp.config import ENV
 
 if ENV == 'prod':
     # root path as /api for behinding the proxy
-    app = FastAPI(root_path='/api', docs_url='/api/docs', openapi_url='/api/openapi.json')
+    app = FastAPI(root_path='/api',
+                  docs_url='/api/docs',
+                  openapi_url='/api/openapi.json')
 else:
     app = FastAPI()
 
