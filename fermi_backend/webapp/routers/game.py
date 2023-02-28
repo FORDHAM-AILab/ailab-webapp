@@ -153,7 +153,7 @@ async def update_portfolio(request: dict,
 
                 if ticker not in current_shares:
                     await session.execute(f"""INSERT INTO game_rm_portfolio VALUES ('{internal_user.internal_sub_id}', 
-                                                    '{ticker}',{round(change_shares * new_prices[ticker], PRICE_DECIMAL)}, {change_shares}, 0, 0,
+                                                    '{ticker}',{round(change_shares * new_prices[ticker], PRICE_DECIMAL)}, {change_shares}, 0,
                                                     {new_prices[ticker]},{new_prices[ticker]})""")
                 else:
                     current_average_price = current_average[ticker]
@@ -343,9 +343,6 @@ async def create_eod_records():
                         current_shares[row['user_id']] = {row['ticker']: row['quantity']}
                     else:
                         current_shares[row['user_id']][row['ticker']] = row['quantity']
-
-
-
 
                 # iterate all users
                 for i in range(len(accounts)):
