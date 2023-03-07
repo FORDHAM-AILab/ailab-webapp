@@ -1,6 +1,6 @@
 import traceback
 
-from fermi_backend.webapp import cache, helpers
+from fermi_backend.webapp import cache, helpers, CONSTS
 from fastapi import APIRouter
 from fermi_backend.webapp.config import ENV
 
@@ -20,7 +20,7 @@ router = APIRouter(
 @router.get("/app")
 def test():
 
-    return ResultResponse(status=0, message="Success")
+    return ResultResponse(status=CONSTS.HTTP_200_OK, message="Success")
 
 
 @router.get("/test_db", tags=['test'])
@@ -30,9 +30,9 @@ async def test_db():
             result = await session.execute(f"""SELECT * FROM cds limit 1 """)
             result = helpers.sql_to_dict(result)
         except Exception as e:
-            return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
+            return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
 
-    return ResultResponse(status=0, message=f"Successfully connected to DB!")
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Successfully connected to DB!")
 
 
 @router.get("/test_redis_cache", tags=['test'])
@@ -41,16 +41,16 @@ async def test_redis_cache():
     try:
         await cache.set("test", 'test_val')
         test_val = await cache.get('test')
-        return ResultResponse(status=0, result=test_val)
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=test_val)
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
 
 
 
 
 @router.get("/env_info", tags=['test'])
 async def env_info():
-    return ResultResponse(status=0, result=ENV)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=ENV)
 
 
 

@@ -2,7 +2,10 @@ import traceback
 from contextlib import asynccontextmanager
 import logging
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from starlette import status
+from datetime import datetime
+from fermi_backend.webapp import CONSTS
 
 from fermi_backend.webapp.webapp_models.generic_models import ResultResponse
 
@@ -55,14 +58,36 @@ async def exception_handling():
         yield
     except DatabaseConnectionError as exc:
         logger.exception(f"Failed to connect to the database: {repr(exc)}")
-        yield ResultResponse(status=-1, message=f"Failed to connect to the database: {repr(exc)}",
-                             debug=f"{str(exc)}:\n{traceback.format_exc()}")
-
+        raise HTTPException(status_code=CONSTS.HTTP_600_DATABASE_CONNECTION_FAILED,
+                            detail="Cannot serve results at the moment. Please try again.")
     except UnauthorizedUser as exc:
         logger.warning(f"Failed to authorize user: {repr(exc)}")
-        yield ResultResponse(status=status.HTTP_401_UNAUTHORIZED, message="User not authorized",
-                             debug=f"{str(exc)}:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User not authorized")
     except Exception as exc:
         logger.exception(repr(exc))
-        yield ResultResponse(status=-1, message="An error has occurred. Please try again.",
-                            debug=f"{str(exc)}:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="An error has occurred. Please try again.")
+
+
+def router_error_handler(func):
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except DatabaseConnectionError as e:
+            logger.exception(f"Failed to connect to the database: {repr(e)}")
+            return ResultResponse(status_code=CONSTS.HTTP_600_DATABASE_CONNECTION_FAILED, message=f"Failed to connect to the database: {repr(e)}",
+                                  debug=f"{str(e)}:\n{traceback.format_exc()}", date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
+        except UnauthorizedUser as e:
+            logger.warning(f"Failed to authorize user: {repr(e)}")
+            return ResultResponse(status_code=CONSTS.HTTP_401_UNAUTHORIZED,
+                                  message=f"Failed to authorize user: {repr(e)}",
+                                  debug=f"{str(e)}:\n{traceback.format_exc()}",
+                                  date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
+        except Exception as e:
+            logger.warning(f"An error has occurred. Please try again: {e}")
+            return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR,
+                                  message="An error has occurred. Please try again.",
+                                  debug=f"{str(e)}:\n{traceback.format_exc()}",
+                                  date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
+    return inner

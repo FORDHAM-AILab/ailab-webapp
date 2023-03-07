@@ -1,15 +1,10 @@
 import traceback
 
 from fastapi import APIRouter
-from datetime import datetime, timedelta
-from ..data.get_options import get_options_expiration_date, get_options_data
+from datetime import datetime
+from fermi_backend.webapp.utils.data import get_options_expiration_date, get_options_data
 from fermi_backend.models.Options.options import Options
-from ..helpers import round_result
-from fermi_backend.models.Portfolio import Portfolio
-from ..webapp_models.generic_models import ResultResponse, Data, CDSData
-from ..CONSTS import ANALYTICS_DECIMALS
 from ..webapp_models.generic_models import ResultResponse
-import pandas as pd
 
 router = APIRouter(
     prefix="/options",
@@ -22,8 +17,8 @@ def get_options_expiration_date_api(ticker):
     try:
         result = get_options_expiration_date(ticker)
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.post("/get_options_data_api")
@@ -32,8 +27,8 @@ def get_options_data_api(requestBody: dict):
         result = get_options_data(requestBody['ticker'], datetime.strptime(requestBody['date'], '%B %d, %Y'),
                                   requestBody['options_type'])
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.post("/options_pricing")
@@ -52,5 +47,5 @@ def options_pricing_api(request_body: dict):
         else:
             result = 0
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)

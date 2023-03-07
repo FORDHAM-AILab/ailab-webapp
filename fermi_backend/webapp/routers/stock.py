@@ -1,9 +1,8 @@
 import traceback
-from typing import List
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
-from ..data.stock import get_single_hist_price, get_analysis_info
+from fermi_backend.webapp.utils.data.stock import get_analysis_info
 from ..webapp_models.generic_models import ResultResponse
 
 router = APIRouter(
@@ -20,5 +19,5 @@ async def get_analysis_info_api(ticker):
         for k, v in result.items():
             result[k] = v.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)

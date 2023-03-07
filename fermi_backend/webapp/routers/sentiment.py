@@ -19,8 +19,8 @@ async def get_recent_news_sentiment():
         for k, v in result.items():
             result[k] = v.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.get("/get_single_stock_news_sentiment/{ticker}")
@@ -30,8 +30,8 @@ async def get_single_stock_news_sentiment(ticker):
         for k, v in result.items():
             result[k] = v.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.post("/get_text_sentiment")
@@ -39,8 +39,8 @@ async def get_text_sentiment(texts: str):
     try:
         result = txt_analyzer(texts)
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.get("/financial_summary")
@@ -48,8 +48,8 @@ async def financial_summary(texts: str):
     try:
         result = txt_summation(texts)
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.post("/get_tweets_sentiment")
@@ -76,8 +76,8 @@ def get_tweets_sentiment(search_requirement: dict):
         for k, v in result.items():
             result[k] = v.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.get("/get_reddits_sentiment")
@@ -85,5 +85,5 @@ async def get_reddits_sentiment(search_requirement: str, tweets_num: int = None)
     try:
         result = reddits_analyzer(search_requirement, tweets_num)
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)

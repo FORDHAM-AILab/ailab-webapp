@@ -23,13 +23,14 @@ access_token_cookie_scheme = auth_schemes.AccessTokenCookieBearer()
 async def get_user_profile(internal_user: InternalUser = Depends(access_token_cookie_scheme)) -> ResultResponse:
     try:
         async with helpers.mysql_session_scope() as session:
-            result = session.execute(f"""SELECT * FROM fermi.users WHERE internal_sub_id = '{internal_user.internal_sub_id}'""")
+            result = session.execute("""SELECT * FROM fermi.users WHERE internal_sub_id = '%s'""",
+                                     internal_user.internal_sub_id)
             result = result[0]
 
-        return ResultResponse(status=0, result=result,
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result,
                               date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
     except Exception as e:
-        return ResultResponse(status=-1, message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
 
 
@@ -42,17 +43,22 @@ async def update_user_profile(request:Request, internal_user: InternalUser = Dep
 
     try:
         async with helpers.mysql_session_scope() as session:
-            await session.execute(f"""UPDATE users SET username = {user_profile['username']},
-                                                           program = {user_profile['program']},
-                                                           username = {user_profile['username']},
-                                                           cohort = {user_profile['cohort']},
-                                                           first_name = {user_profile['first_name']},
-                                                           last_name = {user_profile['last_name']},
-                                                           area_of_interest = {user_profile['area_of_interest']}
-                                WHERE internal_sub_id = '{internal_user.internal_sub_id}'""")
+            await session.execute("""UPDATE users SET username = %s,
+                                                           program = %s,
+                                                           cohort = %s,
+                                                           first_name = %s,
+                                                           last_name = %s,
+                                                           area_of_interest = %s
+                                WHERE internal_sub_id = '%s'""", (user_profile['username'],
+                                                                user_profile['program'],
+                                                                user_profile['cohort'],
+                                                                user_profile['first_name'],
+                                                                user_profile['last_name'],
+                                                                user_profile['area_of_interest'],
+                                                                internal_user.internal_sub_id))
 
-        return ResultResponse(status=0, message=f"Transaction succeed for user: {internal_user.username}",
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Transaction succeed for user: {internal_user.username}",
                               date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
     except Exception as e:
-        return ResultResponse(status=-1, message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))

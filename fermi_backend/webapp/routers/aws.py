@@ -45,10 +45,10 @@ async def get_file_structure(bucket_name: str, key: str):
             result.append(file_dict)
 
     except Exception as e:
-        return ResultResponse(status='failed', message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.utcnow().isoformat()))
     else:
-        return ResultResponse(status='succeed', message=f"get file structure {bucket_name}/{key}", result=result,
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"get file structure {bucket_name}/{key}", result=result,
                               date_done=str(datetime.utcnow().isoformat()))
 
 
@@ -60,10 +60,10 @@ async def upload_s3_object(bucket: str, key: str, file: UploadFile = File(...)
     try:
         s3.upload_file_to_bucket(bucket, file_name, key)
     except Exception as e:
-        return ResultResponse(status='failed', message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.utcnow().isoformat()))
     else:
-        return ResultResponse(status='succeed', message=f"Upload file to {bucket}/{key}",
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Upload file to {bucket}/{key}",
                               date_done=str(datetime.utcnow().isoformat()))
 
 
@@ -79,10 +79,10 @@ async def delete(bucket_name: str, isDirectory: bool, key: str):
         s3_object.meta.client.delete_objects(Bucket=bucket_name, Delete=delete_keys)
 
     except Exception as e:
-        return ResultResponse(status='failed', message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.utcnow().isoformat()))
     else:
-        return ResultResponse(status='succeed',
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK,
                               message=f"Delete {'directory' if isDirectory else 'file'} {bucket_name}/{key}",
                               date_done=str(datetime.utcnow().isoformat()))
 
@@ -113,10 +113,10 @@ async def move_file(bucket_name: str, key: str, isDirectory: bool, path: str):
             await delete(bucket_name, isDirectory, key)
 
     except Exception as e:
-        return ResultResponse(status='failed', message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.utcnow().isoformat()))
     else:
-        return ResultResponse(status='succeed',
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK,
                               message=f"Moved file {bucket_name}/{key} --> to --> {bucket_name}/{path}",
                               date_done=str(datetime.utcnow().isoformat()))
 
@@ -142,10 +142,10 @@ async def rename_file(bucket_name: str, key: str, isDirectory: bool, newname: st
             s3_object.Object(bucket_name, key).delete()
 
     except Exception as e:
-        return ResultResponse(status='failed', message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.utcnow().isoformat()))
     else:
-        return ResultResponse(status='succeed',
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK,
                               message=f"Rename {'directory' if isDirectory else 'file'} {bucket_name}/{key} --> to --> {bucket_name}/{path} ",
                               date_done=str(datetime.utcnow().isoformat()))
 
@@ -170,10 +170,10 @@ async def create_s3_dir(bucket_name: str, key: str):
         key = key + '/' if key[-1] != '/' else key
         s3.put_object(Bucket=bucket_name, Body='', Key=key)
     except Exception as e:
-        return ResultResponse(status='failed', message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.now(TIME_ZONE).isoformat()))
     else:
-        return ResultResponse(status='succeed', message=f"Create directory to {bucket_name}/{key}",
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Create directory to {bucket_name}/{key}",
                               date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
 
@@ -183,8 +183,8 @@ async def create_s3_file(bucket_name: str, key: str):
         s3 = boto3.client('s3')
         s3.put_object(Bucket=bucket_name, Body='', Key=key)
     except Exception as e:
-        return ResultResponse(status='failed', message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.now(TIME_ZONE).isoformat()))
     else:
-        return ResultResponse(status='succeed', message=f"Create file to {bucket_name}/{key}",
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Create file to {bucket_name}/{key}",
                               date_done=str(datetime.now(TIME_ZONE).isoformat()))

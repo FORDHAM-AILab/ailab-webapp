@@ -2,15 +2,10 @@ import traceback
 from typing import List
 import logging
 from fastapi import APIRouter, Query
-from sqlalchemy import create_engine
 
-from .. import config
-from ..data.stock import get_top_gainers, get_top_losers, get_hist_stock_price, get_single_hist_price
+from fermi_backend.webapp.utils.data.stock import get_top_gainers, get_top_losers, get_hist_stock_price, get_single_hist_price
 from ..webapp_models.generic_models import ResultResponse, CDSData
-from ..helpers import read_sql_async, mysql_session_scope, sql_to_dict
-from fermi_backend.webapp import engine
-import numpy as np
-import pandas as pd
+from ..helpers import mysql_session_scope, sql_to_dict
 
 router = APIRouter(
     prefix="/data",
@@ -25,8 +20,8 @@ def get_top_gainers_api(time_range):
         df = get_top_gainers(time_range)[['Symbol', 'Name', 'Price (Intraday)', '% Change']]
         result = df.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.get('/stock/get_top_losers/{time_range}')
@@ -35,8 +30,8 @@ def get_top_losers_api(time_range):
         df = get_top_losers(time_range)[['Symbol', 'Name', 'Price (Intraday)', '% Change']]
         result = df.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.get("/load_hist_stock_price/{start_date}/{end_date}")
@@ -51,8 +46,8 @@ def load_full_hist_stock_price(ticker, start_date, end_date):
         result = get_single_hist_price(ticker, start_date, end_date)
         result = result.to_json(orient='records')
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.post("/data_warehouse/get_cds_data")
@@ -82,8 +77,8 @@ async def get_cds_data(requestBody: CDSData):
         # result = df.to_json(orient="records")
 
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
 
 @router.get("/data_warehouse/cds_get_unique_val/{param}")
@@ -98,5 +93,5 @@ async def cds_get_unique_val(param: str):
             result = [d[param] for d in result]
 
     except Exception as e:
-        return ResultResponse(status=-1, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status=0, result=result)
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)

@@ -5,24 +5,20 @@ from typing import List, Union
 
 import numpy as np
 from fastapi import APIRouter, Depends
-from fastapi.requests import Request
 from datetime import datetime, timedelta
 
 from fermi_backend.models.Portfolio import Portfolio
 from .. import helpers, CONSTS
 from ..CONSTS import TIME_ZONE
-from ..data.stock import get_hist_stock_price, get_real_time_data
+from fermi_backend.webapp.utils.data.stock import get_hist_stock_price, get_real_time_data
 from ..webapp_models.db_models import InternalUser
 import uuid
 from collections import defaultdict
 from ..auth import schemes as auth_schemes
-from ..helpers import format_pct, format_digit, format_currency, round_result, schedule_task
+from ..helpers import format_pct, format_currency, round_result, schedule_task
 from ..webapp_models.generic_models import ResultResponse
-from fastapi_utils.tasks import repeat_every
 from starlette.concurrency import run_in_threadpool
 from ..CONSTS import PRICE_DECIMAL
-import asyncio
-from sqlalchemy import select
 
 router = APIRouter(
     prefix="/game",
@@ -45,7 +41,7 @@ async def create_rm_game_user(internal_user: InternalUser = Depends(access_token
                 VALUES ('{internal_user.internal_sub_id}',{CONSTS.GAME_RM_NOTIONAL},0,{CONSTS.GAME_RM_NOTIONAL},0,0,'{current_time}',
                         '{current_time}')""")
 
-    return ResultResponse(status=0, message=f"Create user: {internal_user.username} for RM game",
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Create user: {internal_user.username} for RM game",
                           date_done=str(current_time))
 
 
@@ -182,10 +178,10 @@ async def update_portfolio(request: dict,
                                                                     AND ticker = '{ticker}'""")
 
 
-        return ResultResponse(status=0, message=f"Transaction succeed for user: {internal_user.username}",
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Transaction succeed for user: {internal_user.username}",
                               date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
     except Exception as e:
-        return ResultResponse(status=-1, message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
 
 
@@ -208,7 +204,7 @@ async def get_transaction_history(internal_user: InternalUser = Depends(access_t
                        'Price': row['price'],
                        'transaction_time': row['transaction_time']}
             result_to_return.append(new_row)
-    return ResultResponse(status=0, result=result_to_return,
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result_to_return,
                           message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
@@ -232,7 +228,7 @@ async def rank_players_rm(by: str = 'net_account_value'):
         for idx, res in enumerate(result):
             res['Rank'] = idx+1
 
-    return ResultResponse(status=0, result=result, date_done=str(datetime.now(TIME_ZONE).isoformat()))
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result, date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
 
 @router.post("/rm_game/reset_game/{user_id}")
@@ -242,7 +238,7 @@ async def reset_game(user_id):
         await session.execute(f"""DELETE FROM game_rm_transactions WHERE user_id = '{user_id}'""")
         await session.execute(f"""DELETE FROM game_rm_portfolio WHERE user_id = '{user_id}'""")
         username = await session.execute(f"""SELECT username FROM users WHERE internal_sub_id = {user_id} """)
-    return ResultResponse(status=0, message=f"Reset user: {username} for RM game",
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Reset user: {username} for RM game",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
 
@@ -273,7 +269,7 @@ async def get_user_account_info(internal_user: InternalUser = Depends(access_tok
                      'hist_var': result['hist_var'],
                      'p_var': result['p_var'],
                      'monte_carlo_var': result['monte_carlo_var']}
-    return ResultResponse(status=0, result=return_result,
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=return_result,
                           message=f"Found user: {internal_user.username}'s current account info",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
@@ -302,7 +298,7 @@ async def get_user_position(internal_user: InternalUser = Depends(access_token_c
                         'AVG Price': format_currency(row['average_price'])}
         rows.append(modified_row)
 
-    return ResultResponse(status=0, result=rows,
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=rows,
                           message=f"Found user: {internal_user.username}'s current account info",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
@@ -315,7 +311,6 @@ async def create_eod_records():
     """
     import pandas_market_calendars as mcal
     import datetime
-    import yfinance as yf
     try:
         now = datetime.datetime.now(CONSTS.TIME_ZONE)
         nyse = mcal.get_calendar('NYSE')
@@ -377,7 +372,7 @@ async def create_eod_records():
 
 
     except Exception as e:
-        return ResultResponse(status=-1, message=f"{str(e)}:\n{traceback.format_exc()}",
+        return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.datetime.now(CONSTS.TIME_ZONE).isoformat()))
 
 
@@ -423,7 +418,7 @@ async def get_historical_records(internal_user: InternalUser = Depends(access_to
     async with helpers.mysql_session_scope() as session:
         results = await session.execute(f"""SELECT * FROM game_rm_records WHERE internal_user.internal_sub_id""")
         results = helpers.sql_to_dict(results)
-    return ResultResponse(status=0, result=results,
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=results,
                           message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
@@ -437,6 +432,6 @@ async def get_historical_net_account_value(internal_user: InternalUser = Depends
     async with helpers.mysql_session_scope() as session:
         results = await session.execute(f"""SELECT user_id,date,net_account_value FROM game_rm_records""")
         results = helpers.sql_to_dict(results)
-    return ResultResponse(status=0, result=results,
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=results,
                           message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))

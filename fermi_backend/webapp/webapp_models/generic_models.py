@@ -18,8 +18,9 @@ class ReceiveTag(BaseModel):
 
 
 class ResultResponse(BaseModel):
+    # TODO: unify status -> status_code, unify status code to http.status
     # status = -1 means error, >=0 means succeed.
-    status: Optional[Union[str, int]] = None
+    status_code: Optional[Union[str, int]] = None
     message: Optional[str] = None
     result: Optional[Union[float, int, str, list, dict]] = None
     date_done: Optional[datetime.datetime] = None
