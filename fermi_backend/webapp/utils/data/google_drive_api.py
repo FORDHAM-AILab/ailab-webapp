@@ -132,7 +132,7 @@ class GoogleDriveAPI:
 
 
     def get_csv_file(self, fname:str, path_loc:str = None):
-        assert fname.endswith('.csv'), "Unsupported csv extension"
+        assert fname.endswith(('.csv', '.xlsx')), "Unsupported csv extension"
         _, f_id = self.get_obj(is_dir=False, names=[fname], mode="=")[0]
         file = self.download_file(f_id)
         return decode_bytes_obj(file, 'csv', os.path.join(path_loc, fname) if path_loc else None)
@@ -140,5 +140,5 @@ class GoogleDriveAPI:
 
 if __name__ == '__main__':
     driver = GoogleDriveAPI('/Users/xuanmingcui/Documents/projects/ailab-webapp/fermi_backend/webapp/utils/data')
-    driver.get_csv_file('DJ30-5yr-stocks.csv', "./")
+    print(driver.get_files_under_parent_name("Updated_2022Aug"))
     # download_file(service, '')

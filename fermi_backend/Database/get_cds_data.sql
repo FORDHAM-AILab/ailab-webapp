@@ -1,0 +1,24 @@
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetCDSData`(pREGION VARCHAR(256),pINDUSTRY VARCHAR(256), pOBLIGATION_ASSETRANK VARCHAR(256),
+									 pCREDIT_EVENTS VARCHAR(256), pCURRENCY VARCHAR(256), plimit INT(8))
+BEGIN
+	-- if plimit is null, then there is no limit on # of rows.
+	IF (plimit IS NULL) THEN
+    -- SELECT * FROM JSON_TABLE(pREGION, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j
+    -- line 8 split the json-like string, e.g. '["NOAM", "EURO"]'
+		SELECT * FROM fermi_db.cds WHERE (REGION IN (SELECT * FROM JSON_TABLE(pREGION, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pREGION IS NULL))
+									 AND (INDUSTRY IN (SELECT * FROM JSON_TABLE(pINDUSTRY, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pINDUSTRY IS NULL))
+                                     AND (OBLIGATION_ASSETRANK IN (SELECT * FROM JSON_TABLE(pOBLIGATION_ASSETRANK, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pOBLIGATION_ASSETRANK IS NULL))
+                                     AND (CREDIT_EVENTS IN (SELECT * FROM JSON_TABLE(pCREDIT_EVENTS, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pCREDIT_EVENTS IS NULL))
+                                     AND (CURRENCY IN (SELECT * FROM JSON_TABLE(pCURRENCY, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pCURRENCY IS NULL))
+                                     ;
+	-- otherwise, set a limit
+    ELSE
+		SELECT * FROM fermi_db.cds WHERE (REGION IN (SELECT * FROM JSON_TABLE(pREGION, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pREGION IS NULL))
+									 AND (INDUSTRY IN (SELECT * FROM JSON_TABLE(pINDUSTRY, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pINDUSTRY IS NULL))
+                                     AND (OBLIGATION_ASSETRANK IN (SELECT * FROM JSON_TABLE(pOBLIGATION_ASSETRANK, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pOBLIGATION_ASSETRANK IS NULL))
+                                     AND (CREDIT_EVENTS IN (SELECT * FROM JSON_TABLE(pCREDIT_EVENTS, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pCREDIT_EVENTS IS NULL))
+                                     AND (CURRENCY IN (SELECT * FROM JSON_TABLE(pCURRENCY, '$[*]' COLUMNS (NAME VARCHAR(50) PATH '$')) j) OR (pCURRENCY IS NULL))
+									 LIMIT plimit
+                                     ;
+	END IF;
+END
