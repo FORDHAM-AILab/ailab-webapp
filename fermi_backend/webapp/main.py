@@ -29,13 +29,17 @@ if ENV == 'prod':
 else:
     app = FastAPI()
 
-# logging.config.fileConfig(fname=f"{os.path_or_df.dirname(__file__)}/logging.conf")
-logging.basicConfig(filename=f"{os.path.dirname(__file__)}/logging.log", level=logging.DEBUG,
+logging.basicConfig(
+                    handlers=[
+                        logging.FileHandler(f"{os.path.dirname(__file__)}/logging.log"),
+                        logging.StreamHandler()
+                    ],
+                    level=logging.DEBUG,
                     format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                     datefmt='%H:%M:%S'
                     )
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 app.include_router(auth.router)
 app.include_router(aws.router)

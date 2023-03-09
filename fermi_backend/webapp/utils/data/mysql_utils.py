@@ -1,3 +1,9 @@
+import sys
+import os
+module_path = os.path.abspath(__file__)
+sys.path.append(module_path[:module_path.index("webapp")])
+sys.path.append(module_path[:module_path.index("fermi_backend")])
+
 import copy
 import traceback
 
@@ -11,7 +17,18 @@ from fermi_backend.webapp.exceptions import exception_handling
 import logging
 from fermi_backend.webapp.utils.data.google_drive_api import GoogleDriveAPI
 import argparse
+
+logging.basicConfig(
+                    handlers=[
+                        logging.FileHandler(f"{os.path.dirname(__file__)}/logging.log"),
+                        logging.StreamHandler()
+                    ],
+                    level=logging.DEBUG,
+                    format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                    datefmt='%H:%M:%S'
+                    )
 logger = logging.getLogger(__name__)
+
 
 async def insert_into_sql(df: pd.DataFrame, table_name: str, extra_space: int = 5):
 
@@ -70,8 +87,10 @@ def format_df(path_or_df, index_col: int = None):
     # NOTE: This is very ad-hoc
     if 'YYYYMMDD' in df: # from WRDS-CRSP
         df['Date_General'] = df['YYYYMMDD'].apply(lambda x: pd.to_datetime(str(x), format='%Y%m%d')).dt.date
+        df['Quarter'] = pd.PeriodIndex(df['Date_General'], freq='Q').astype(str)
     elif 'datadate' in df: # from WRDS-COMPUSTAT-CAPIQ
         df['Date_General'] = df['datadate'].apply(lambda x: pd.to_datetime(str(x), format='%Y%m%d')).dt.date
+        df['Quarter'] = pd.PeriodIndex(df['Date_General'], freq='Q').astype(str)
 
     if 'PERMNO' in df:
         df['PERMNO'] = df['PERMNO'].astype('str')
@@ -84,7 +103,7 @@ def format_df(path_or_df, index_col: int = None):
 def download_data_to_sql(filename, table_name, source='Google', **kwargs):
     try:
         if source == 'Google':
-            google_connector = GoogleDriveAPI(cred_dir_path=kwargs.get('cred_dir_path'))
+            google_connector = GoogleDriveAPI(cred_dir_path=kwargs.get('cred_dir_path', os.path.dirname(os.path.abspath(__file__))))
             logger.info("==> Downloading data from drive")
             df = google_connector.get_csv_file(filename, path_loc=None)
             logger.info("==> Formatting data for sql insertion")

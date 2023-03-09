@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, Query
 
 from fermi_backend.webapp.utils.data.stock import get_top_gainers, get_top_losers, get_hist_stock_price, get_single_hist_price
+from .. import CONSTS
 from ..webapp_models.generic_models import ResultResponse, CDSData
 from ..helpers import mysql_session_scope, sql_to_dict
 
@@ -95,3 +96,8 @@ async def cds_get_unique_val(param: str):
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
     return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+
+
+@router.get("/")
+async def get_integrated_data():
+    pass
