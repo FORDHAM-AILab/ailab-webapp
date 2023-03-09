@@ -6,11 +6,11 @@ Created on Thu Sep  6 14:51:13 2018
 """
 '''
 import sys
-sys.path.append("./Data")
-sys.path.append("./VaR")
-sys.path.append("./Geske")
-sys.path.append("./Liquidity")
-sys.path.append("./Binomial")
+sys.path_or_df.append("./Data")
+sys.path_or_df.append("./VaR")
+sys.path_or_df.append("./Geske")
+sys.path_or_df.append("./Liquidity")
+sys.path_or_df.append("./Binomial")
 '''
 
 from models.VaR.VaR import ValueAtRisk

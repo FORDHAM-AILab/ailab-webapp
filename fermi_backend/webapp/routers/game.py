@@ -65,7 +65,7 @@ async def update_portfolio(request: dict,
 
         async with helpers.mysql_session_scope() as session:
             current_account_info = await session.execute(f"""SELECT * FROM game_rm_account WHERE 
-                                                 user_id = '{internal_user.internal_sub_id}' """)
+                                                 user_id = :id """, {'id':internal_user.internal_sub_id})
             current_portfolio    = await session.execute(f"""SELECT * FROM game_rm_portfolio WHERE
                                                  user_id = '{internal_user.internal_sub_id}'""")
             if current_account_info.rowcount == 0:

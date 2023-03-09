@@ -22,14 +22,14 @@ from fermi_backend.webapp.routers import auth, aws, data, game, options, portfol
 from fermi_backend.webapp.config import ENV
 
 if ENV == 'prod':
-    # root path as /api for behinding the proxy
+    # root path_or_df as /api for behinding the proxy
     app = FastAPI(root_path='/api',
                   docs_url='/api/docs',
                   openapi_url='/api/openapi.json')
 else:
     app = FastAPI()
 
-# logging.config.fileConfig(fname=f"{os.path.dirname(__file__)}/logging.conf")
+# logging.config.fileConfig(fname=f"{os.path_or_df.dirname(__file__)}/logging.conf")
 logging.basicConfig(filename=f"{os.path.dirname(__file__)}/logging.log", level=logging.DEBUG,
                     format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                     datefmt='%H:%M:%S'

@@ -25,7 +25,7 @@ async def get_file_structure(bucket_name: str, key: str):
             file_dict = {}
             if object_summary.key != key and object_summary.key != key + '/':
                 file_dict['name'] = [i for i in object_summary.key.split('/') if i != ''][-1]
-                file_dict['path'] = object_summary.key
+                file_dict['path_or_df'] = object_summary.key
                 if object_summary.key[-1] == '/':
                     file_dict['IsDirectory'] = True
                     if len(list(my_bucket.objects.filter(Prefix=object_summary.key))) > 1:

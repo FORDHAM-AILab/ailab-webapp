@@ -322,7 +322,7 @@ def put_object(bucket_name: str, file: str, key: str, sse: Optional[dict] = None
     File is uploaded in one piece, capped at 5 Gb, can be tracked.  Check BOTO3 docs for more details
     Input:
         bucket_name:    specify which bucket to upload this file
-        file:           path for the local file to be uploaded
+        file:           path_or_df for the local file to be uploaded
         key:            key name in S3 bucket.  It could be different than the local filename
     Output:
         response:       status of the upload
@@ -368,7 +368,7 @@ def upload_file_to_bucket(bucket_name: str, file_name: str,
     can NOT be tracked.  Check BOTO3 docs for more details
     Input:
         bucket_name:    specify which bucket to upload this file
-        file:           path for the local file to be uploaded
+        file:           path_or_df for the local file to be uploaded
         key_name:       key name in S3 bucket.  It could be different than the local filename
         sse:            security config/setting
     Output:

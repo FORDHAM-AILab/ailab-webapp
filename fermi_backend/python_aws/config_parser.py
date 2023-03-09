@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 import json
 from typing import Optional, Union
 
-# Default config path
+# Default config path_or_df
 default_config_path = pathlib.Path(__file__).parent.resolve().joinpath('config.yml')
 
 default_secret_keys = None
@@ -80,7 +80,7 @@ def parse_config(path: typing.Optional[str] = default_config_path,
     app:
         log_path: !ENV '/var/${LOG_PATH}'
         something_else: !ENV '${AWESOME_ENV_VAR}/var/${A_SECOND_AWESOME_VAR}'
-    :param str path: the path to the yaml file
+    :param str path: the path_or_df to the yaml file
     :param str data: the yaml df itself as a stream
     :param str tag: the tag to look for
     :return: the dict configuration
@@ -126,7 +126,7 @@ def parse_config(path: typing.Optional[str] = default_config_path,
     elif data:
         cfg = yaml.load(data, Loader=loader)
     else:
-        raise ValueError('Either a path or df should be defined as input')
+        raise ValueError('Either a path_or_df or df should be defined as input')
 
     # This is a second pass at parsing and now with secrets
     if 'secrets' in cfg:

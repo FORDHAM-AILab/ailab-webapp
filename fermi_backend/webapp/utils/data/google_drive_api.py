@@ -134,7 +134,7 @@ class GoogleDriveAPI:
         assert fname.endswith('.csv'), "Unsupported csv extension"
         _, f_id = self.get_obj(is_dir=False, names=[fname], mode="=")[0]
         file = self.download_file(f_id)
-        return decode_bytes_obj(file, 'csv', os.path.join(path_loc, fname))
+        return decode_bytes_obj(file, 'csv', os.path.join(path_loc, fname) if path_loc else None)
 
 
 if __name__ == '__main__':
