@@ -43,3 +43,14 @@ class CDSData(BaseModel):
     CURRENCY: list = None
     limit: int = 100
 
+
+class DataIntegrator(BaseModel):
+    table_names: List[str]
+    join_types: List[str]
+    join_cols: List[str]
+    identifier: dict
+    start_date: str
+    end_date: str
+    table_columns: dict
+
+

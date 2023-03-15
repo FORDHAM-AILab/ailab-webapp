@@ -28,7 +28,7 @@ async def test_db():
     async with helpers.mysql_session_scope() as session:
         try:
             result = await session.execute(f"""SELECT * FROM cds limit 1 """)
-            result = helpers.sql_to_dict(result)
+            result = helpers.parse_sql_results(result)
         except Exception as e:
             return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
 

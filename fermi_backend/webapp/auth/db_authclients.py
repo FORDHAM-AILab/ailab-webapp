@@ -263,7 +263,7 @@ class AuthMySQLClient(DatabaseClient):
         encrypted_external_sub_id = await self._encrypt_external_sub_id(external_user)
         async with helpers.mysql_session_scope() as session:
             result = await session.execute(f"""SELECT * FROM users WHERE external_sub_id = "{encrypted_external_sub_id}" """)
-            result = helpers.sql_to_dict(result)
+            result = helpers.parse_sql_results(result)
 
 
         if len(result) > 0:
@@ -281,7 +281,7 @@ class AuthMySQLClient(DatabaseClient):
         internal_user = None
         async with helpers.mysql_session_scope() as session:
             result = await session.execute(f"""SELECT * FROM users WHERE internal_sub_id = "{internal_sub_id}" """)
-            result = helpers.sql_to_dict(result)
+            result = helpers.parse_sql_results(result)
 
         if len(result) > 0:
             internal_user = InternalUser(**result[0])

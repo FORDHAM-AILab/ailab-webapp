@@ -68,7 +68,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Authorization", "x-authorization", "Authorization", "authorization"]
+    expose_headers=["*"]
 )
 
 app.add_middleware(SessionMiddleware, secret_key='!secret')

@@ -171,7 +171,10 @@ def checkMarketTime(now=None):
 
 # ---------------------- SQL Related... ----------------------
 
-def sql_to_dict(result_proxy) -> List[dict]:
+def parse_sql_results(result_proxy, orient="records"):
+    """
+    orient: align with pandas to_dict orient param
+    """
     if result_proxy is None:
         return []
     result = []
@@ -181,7 +184,11 @@ def sql_to_dict(result_proxy) -> List[dict]:
             if type(v) == Decimal:
                 row_dict[k] = float(v)
         result.append(row_dict)
-    return result
+    if orient == "records":
+        return result
+    else:
+        result = pd.DataFrame(result).to_dict(orient=orient)
+        return result
 
 
 @asynccontextmanager

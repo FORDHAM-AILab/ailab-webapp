@@ -1,7 +1,7 @@
 import traceback
 from contextlib import asynccontextmanager
 import logging
-
+from functools import wraps
 from fastapi import HTTPException
 from starlette import status
 from datetime import datetime
@@ -71,9 +71,10 @@ async def exception_handling():
 
 
 def router_error_handler(func):
-    def inner(*args, **kwargs):
+    @wraps(func)
+    async def inner(*args, **kwargs):
         try:
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
         except DatabaseConnectionError as e:
             logger.exception(f"Failed to connect to the database: {repr(e)}")
             return ResultResponse(status_code=CONSTS.HTTP_600_DATABASE_CONNECTION_FAILED, message=f"Failed to connect to the database: {repr(e)}",

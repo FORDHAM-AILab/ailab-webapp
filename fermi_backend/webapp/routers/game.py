@@ -70,8 +70,8 @@ async def update_portfolio(request: dict,
                                                  user_id = '{internal_user.internal_sub_id}'""")
             if current_account_info.rowcount == 0:
                 raise Exception(f'User: {internal_user.username} not registered for the game')
-            current_account_info = helpers.sql_to_dict(current_account_info)
-            current_portfolio    = helpers.sql_to_dict(current_portfolio)
+            current_account_info = helpers.parse_sql_results(current_account_info)
+            current_portfolio    = helpers.parse_sql_results(current_portfolio)
 
         new_transaction = request#await request.json()
         new_transactions = json.loads(new_transaction['transactions'])
@@ -196,7 +196,7 @@ async def get_transaction_history(internal_user: InternalUser = Depends(access_t
         result = await session.execute(
             f"""SELECT transaction_id, ticker, shares, price, transaction_time FROM game_rm_transactions WHERE user_id='{internal_user.internal_sub_id}' 
                 ORDER BY transaction_time DESC""")
-        result = helpers.sql_to_dict(result)
+        result = helpers.parse_sql_results(result)
         result_to_return = []
         for row in result:
             new_row = {'Ticker': row['ticker'],
@@ -223,7 +223,7 @@ async def rank_players_rm(by: str = 'net_account_value'):
                 ON game_rm_records.user_id = users.internal_sub_id 
                 WHERE Date(date) = {today} 
                 ORDER BY {by} DESC""")
-        result = helpers.sql_to_dict(result)
+        result = helpers.parse_sql_results(result)
 
         for idx, res in enumerate(result):
             res['Rank'] = idx+1
@@ -247,7 +247,7 @@ async def _get_user_account_info(internal_user: InternalUser) -> Union[dict, int
     async with helpers.mysql_session_scope() as session:
         result = await session.execute(
             f"""SELECT * from game_rm_account WHERE user_id = "{internal_user.internal_sub_id}" """)
-        result = helpers.sql_to_dict(result)
+        result = helpers.parse_sql_results(result)
 
     if len(result) == 0:
         return -1
@@ -279,7 +279,7 @@ async def _get_user_position(internal_user: InternalUser) -> List[dict]:
     async with helpers.mysql_session_scope() as session:
         coroutine = await session.execute(
             f"""SELECT * from game_rm_portfolio WHERE user_id = "{internal_user.internal_sub_id}" """)
-        result = helpers.sql_to_dict(coroutine)
+        result = helpers.parse_sql_results(coroutine)
 
     return result
 
@@ -321,7 +321,7 @@ async def create_eod_records():
         async with helpers.mysql_session_scope() as session:
             date_history = await session.execute(f"""SELECT date FROM game_rm_records""")
             if date_history is not None:
-                date_history = helpers.sql_to_dict(date_history)
+                date_history = helpers.parse_sql_results(date_history)
                 date_history = [sub['date'].isoformat() for sub in date_history]
             else:
                 date_history = []
@@ -329,9 +329,9 @@ async def create_eod_records():
         if (now.strftime('%Y-%m-%d') in market_days) and (now.strftime('%Y-%m-%d') not in date_history) and (now.time() > closeTime) and (now.time() < refreshTime):
             async with helpers.mysql_session_scope() as session:
                 accounts = await session.execute(f"""SELECT * FROM game_rm_account;""")
-                accounts = helpers.sql_to_dict(accounts)
+                accounts = helpers.parse_sql_results(accounts)
                 portfolio = await session.execute(f"""SELECT * FROM game_rm_portfolio;""")
-                portfolio = helpers.sql_to_dict(portfolio)
+                portfolio = helpers.parse_sql_results(portfolio)
                 current_shares = {}
                 for row in portfolio:
                     if row['user_id'] not in current_shares:
@@ -350,7 +350,7 @@ async def create_eod_records():
                     net_account_value_history = await session.execute(f"""SELECT net_account_value FROM game_rm_records 
                                                                                 WHERE user_id={user_id}""")
                     if net_account_value_history is not None:
-                        net_account_value_history = helpers.sql_to_dict(net_account_value_history)
+                        net_account_value_history = helpers.parse_sql_results(net_account_value_history)
                         net_account_value_history = np.array([sub['net_account_value'] for sub in net_account_value_history])
                         sharpe_ratio = await run_in_threadpool(
                             calculate_eod_sharpe_ratio, net_account_value_today, net_account_value_history)
@@ -417,7 +417,7 @@ async def get_historical_records(internal_user: InternalUser = Depends(access_to
     """
     async with helpers.mysql_session_scope() as session:
         results = await session.execute(f"""SELECT * FROM game_rm_records WHERE internal_user.internal_sub_id""")
-        results = helpers.sql_to_dict(results)
+        results = helpers.parse_sql_results(results)
     return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=results,
                           message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))
@@ -431,7 +431,7 @@ async def get_historical_net_account_value(internal_user: InternalUser = Depends
     """
     async with helpers.mysql_session_scope() as session:
         results = await session.execute(f"""SELECT user_id,date,net_account_value FROM game_rm_records""")
-        results = helpers.sql_to_dict(results)
+        results = helpers.parse_sql_results(results)
     return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=results,
                           message=f"Transaction succeed for user: {internal_user.username}",
                           date_done=str(datetime.now(TIME_ZONE).isoformat()))

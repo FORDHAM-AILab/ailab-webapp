@@ -36,7 +36,7 @@ async def insert_into_sql(df: pd.DataFrame, table_name: str, extra_space: int = 
 
     async with helpers.mysql_session_scope() as session:
         table = await session.execute(f"""SHOW TABLES LIKE '{table_name}' """)
-        table = helpers.sql_to_dict(table)
+        table = helpers.parse_sql_results(table)
         # if table already exists, just insert
         sync_engine = create_engine(MYSQL_CONNECTION_URL_SYNC)
         if table:
