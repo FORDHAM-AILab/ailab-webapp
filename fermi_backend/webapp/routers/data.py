@@ -125,10 +125,8 @@ async def fetch_available_joins():
     return ResultResponse(result=avail_asset_identifiers, status_code=CONSTS.HTTP_200_OK, message=f"Successfully queried available tables",
       date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
 
-
-
-@router_error_handler
 @router.post("/data_warehouse/get_table_cols/")
+@router_error_handler
 async def get_table_cols(request: dict):
     result_dict = {}
     table_names = request['table_columns']
