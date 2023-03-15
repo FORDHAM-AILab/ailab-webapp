@@ -102,16 +102,18 @@ async def cds_get_unique_val(param: str):
 
     return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
 
-@router_error_handler
+
 @router.get("/data_warehouse/fetch_available_tables")
+@router_error_handler
 async def fetch_available_tables():
       return ResultResponse(result=[{'value': i, 'label': i} for i in AVAIL_JOIN_TABLES],
                             status_code=CONSTS.HTTP_200_OK, message=f"Successfully queried available tables",
           date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
 
 
-@router_error_handler
+
 @router.get("/data_warehouse/fetch_available_identifiers")
+@router_error_handler
 async def fetch_available_identifiers():
     avail_asset_identifiers = [{'value': i, 'label': i} for i in AVAIL_ASSET_IDENTIFIERS]
     return ResultResponse(result=avail_asset_identifiers, status_code=CONSTS.HTTP_200_OK, message=f"Successfully queried available tables",

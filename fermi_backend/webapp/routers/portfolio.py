@@ -2,6 +2,7 @@ import traceback
 
 from fastapi import APIRouter
 
+from .. import CONSTS
 from ..helpers import round_result
 from fermi_backend.models.Portfolio import Portfolio
 from ..webapp_models.generic_models import ResultResponse, Data, CDSData
