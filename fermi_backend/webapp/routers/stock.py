@@ -2,7 +2,7 @@ import traceback
 
 from fastapi import APIRouter
 
-from fermi_backend.webapp.utils.data.stock import get_analysis_info
+from fermi_backend.webapp.data.stock import get_analysis_info
 from ..webapp_models.generic_models import ResultResponse
 
 router = APIRouter(

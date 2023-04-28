@@ -1,5 +1,4 @@
 from __future__ import print_function
-import logging
 import os.path
 from typing import List
 import io
@@ -10,7 +9,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
-from fermi_backend.webapp.utils.data.data_utils import  decode_bytes_obj
+from fermi_backend.webapp.data.data_utils import  decode_bytes_obj
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly', 'https://www.googleapis.com/auth/drive']
@@ -139,6 +138,6 @@ class GoogleDriveAPI:
 
 
 if __name__ == '__main__':
-    driver = GoogleDriveAPI('/Users/xuanmingcui/Documents/projects/ailab-webapp/fermi_backend/webapp/utils/data')
+    driver = GoogleDriveAPI('/fermi_backend/webapp/utils/data')
     print(driver.get_files_under_parent_name("Updated_2022Aug"))
     # download_file(service, '')

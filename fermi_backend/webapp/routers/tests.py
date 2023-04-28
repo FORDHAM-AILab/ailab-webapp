@@ -25,7 +25,7 @@ def test():
 
 @router.get("/test_db", tags=['test'])
 async def test_db():
-    async with helpers.mysql_session_scope() as session:
+    async with helpers.sql_session_scope() as session:
         try:
             result = await session.execute(f"""SELECT * FROM cds limit 1 """)
             result = helpers.parse_sql_results(result)

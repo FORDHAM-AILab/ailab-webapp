@@ -1,3 +1,4 @@
+import functools
 import traceback
 from datetime import datetime
 from decimal import Decimal
@@ -25,6 +26,7 @@ from starlette.concurrency import run_in_threadpool
 NoArgsNoReturnFuncT = Callable[[], None]
 NoArgsNoReturnAsyncFuncT = Callable[[], Coroutine[Any, Any, None]]
 NoArgsNoReturnDecorator = Callable[[Union[NoArgsNoReturnFuncT, NoArgsNoReturnAsyncFuncT]], NoArgsNoReturnAsyncFuncT]
+
 
 def sqlquote(value):
     """Naive SQL quoting
@@ -192,8 +194,8 @@ def parse_sql_results(result_proxy, orient="records"):
 
 
 @asynccontextmanager
-async def mysql_session_scope():
-    session = scoped_session(mysql_session_factory)
+async def sql_session_scope(sql_session_factory=mysql_session_factory):
+    session = scoped_session(sql_session_factory)
     try:
         yield session
         await session.commit()
@@ -204,17 +206,20 @@ async def mysql_session_scope():
         await session.close()
 
 
-async def read_sql_async(stmt, con):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, pd.read_sql, stmt, con)
+async def pd_read_sql_async(engine, sql, **kwargs):
+    def read_sql_query(con, stmt):
+        return pd.read_sql_query(stmt, con, **kwargs)
+
+    async with engine.begin() as conn:
+        return await conn.run_sync(read_sql_query, sql)
 
 
 def schedule_task(
-    *,
-    scheduleHour: int,
-    logger: Optional[logging.Logger] = None,
-    raise_exceptions: bool = False,
-    max_repetitions: Optional[int] = None,
+        *,
+        scheduleHour: int,
+        logger: Optional[logging.Logger] = None,
+        raise_exceptions: bool = False,
+        max_repetitions: Optional[int] = None,
 ) -> NoArgsNoReturnDecorator:
     """
     This function returns a decorator that modifies a function so it is periodically re-executed after its first call.
@@ -284,10 +289,12 @@ def schedule_task(
                         await asyncio.sleep((future - t).total_seconds())
                     else:
                         await asyncio.sleep((future - t).total_seconds())
-                    #await asyncio.sleep(seconds)
+                    # await asyncio.sleep(seconds)
 
             ensure_future(loop())
 
         return wrapped
 
     return decorator
+
+

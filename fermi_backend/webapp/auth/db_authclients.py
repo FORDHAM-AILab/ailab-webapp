@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from sqlalchemy import create_engine
 from fermi_backend.webapp import helpers
-from fermi_backend.webapp.helpers import mysql_session_scope
+from fermi_backend.webapp.helpers import sql_session_scope
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorClientSession,
@@ -261,7 +261,7 @@ class AuthMySQLClient(DatabaseClient):
         internal_user = None
 
         encrypted_external_sub_id = await self._encrypt_external_sub_id(external_user)
-        async with helpers.mysql_session_scope() as session:
+        async with helpers.sql_session_scope() as session:
             result = await session.execute(f"""SELECT * FROM users WHERE external_sub_id = "{encrypted_external_sub_id}" """)
             result = helpers.parse_sql_results(result)
 
@@ -279,7 +279,7 @@ class AuthMySQLClient(DatabaseClient):
 
     async def get_user_by_internal_sub_id(self, internal_sub_id: str) -> InternalUser:
         internal_user = None
-        async with helpers.mysql_session_scope() as session:
+        async with helpers.sql_session_scope() as session:
             result = await session.execute(f"""SELECT * FROM users WHERE internal_sub_id = "{internal_sub_id}" """)
             result = helpers.parse_sql_results(result)
 
@@ -292,7 +292,7 @@ class AuthMySQLClient(DatabaseClient):
         encrypted_external_sub_id = await self._encrypt_external_sub_id(external_user)
         unique_identifier = str(uuid4())
         created_at = datetime.datetime.utcnow()
-        async with helpers.mysql_session_scope() as session:
+        async with helpers.sql_session_scope() as session:
             await session.execute(f"""INSERT INTO users (internal_sub_id, external_sub_id, username, email, created_at) 
                              VALUES ("{unique_identifier}", "{encrypted_external_sub_id}", 
                              "{external_user.username}", "{external_user.email}", "{created_at}")""")
@@ -309,7 +309,7 @@ class AuthMySQLClient(DatabaseClient):
 
     async def update_internal_user(self, internal_user: InternalUser) -> Optional[InternalUser]:
 
-        async with helpers.mysql_session_scope() as session:
+        async with helpers.sql_session_scope() as session:
             result = await session.execute(f"""UPDATE users SET external_sub_id = "{internal_user.external_sub_id}",
                                                           username = "{internal_user.username}",
                                                           email = "{internal_user.email}"

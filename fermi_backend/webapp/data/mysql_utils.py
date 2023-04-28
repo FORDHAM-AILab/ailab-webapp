@@ -13,9 +13,8 @@ from fermi_backend.webapp.config import MYSQL_CONNECTION_URL_SYNC
 from fermi_backend.webapp import helpers
 import pandas as pd
 import asyncio
-from fermi_backend.webapp.exceptions import exception_handling
 import logging
-from fermi_backend.webapp.utils.data.google_drive_api import GoogleDriveAPI
+from fermi_backend.webapp.data.google_drive_api import GoogleDriveAPI
 import argparse
 
 logging.basicConfig(
@@ -34,7 +33,7 @@ async def insert_into_sql(df: pd.DataFrame, table_name: str, extra_space: int = 
 
     # TODO: pandas df.to_sql shall fail on duplications
 
-    async with helpers.mysql_session_scope() as session:
+    async with helpers.sql_session_scope() as session:
         table = await session.execute(f"""SHOW TABLES LIKE '{table_name}' """)
         table = helpers.parse_sql_results(table)
         # if table already exists, just insert

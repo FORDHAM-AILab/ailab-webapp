@@ -65,7 +65,7 @@ async def exception_handling():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail=f"User not authorized: {str(exc)}:\n{traceback.format_exc()}")
     except Exception as exc:
-        logger.exception(repr(exc)+ f" Detailed: {traceback.format_exc()}")
+        logger.exception(repr(exc) + f" Detailed: {traceback.format_exc()}")
         raise HTTPException(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=f"An error has occurred. Please try again: {str(exc)}:\n{traceback.format_exc()}")
 
@@ -76,7 +76,7 @@ def router_error_handler(func):
         try:
             return await func(*args, **kwargs)
         except DatabaseConnectionError as e:
-            logger.exception(f"Failed to connect to the database: {repr(e)}")
+            logger.exception(f"Failed to connect to the database: {repr(e)}. Detail: {traceback.format_exc()}")
             return ResultResponse(status_code=CONSTS.HTTP_600_DATABASE_CONNECTION_FAILED, message=f"Failed to connect to the database: {repr(e)}",
                                   debug=f"{str(e)}:\n{traceback.format_exc()}", date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
         except UnauthorizedUser as e:

@@ -22,7 +22,7 @@ access_token_cookie_scheme = auth_schemes.AccessTokenCookieBearer()
 @router.get('/get_user_profile')
 async def get_user_profile(internal_user: InternalUser = Depends(access_token_cookie_scheme)) -> ResultResponse:
     try:
-        async with helpers.mysql_session_scope() as session:
+        async with helpers.sql_session_scope() as session:
             result = session.execute("""SELECT * FROM fermi.users WHERE internal_sub_id = :internal_sub_id""",
                                      {'internal_sub_id': internal_user.internal_sub_id})
             result = result[0]
@@ -42,7 +42,7 @@ async def update_user_profile(request:Request, internal_user: InternalUser = Dep
     # user_profile = {k: sqlquote(v) for k,v in user_profile.items()}
 
     try:
-        async with helpers.mysql_session_scope() as session:
+        async with helpers.sql_session_scope() as session:
             await session.execute(text("""UPDATE users SET username = :username,
                                                            program = :program,
                                                            cohort = :cohort,
