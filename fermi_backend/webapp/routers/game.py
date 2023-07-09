@@ -38,9 +38,9 @@ async def create_rm_game_user(internal_user: InternalUser = Depends(access_token
     async with helpers.sql_session_scope() as session:
         await session.execute(
             f"""INSERT INTO game_rm_account (user_id, net_account_value,market_value,cash_balance, pl,pl_percent,
-                updated_at, created_at) 
+                updated_at, created_at, hist_var, p_var, monte_carlo_var) 
                 VALUES ('{internal_user.internal_sub_id}',{CONSTS.GAME_RM_NOTIONAL},0,{CONSTS.GAME_RM_NOTIONAL},0,0,'{current_time}',
-                        '{current_time}')""")
+                        '{current_time}',0,0,0)""")
 
     return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"Create user: {internal_user.username} for RM game",
                           date_done=str(current_time))
