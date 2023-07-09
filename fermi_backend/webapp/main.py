@@ -6,6 +6,9 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
+
+import starlette.responses
+
 from fermi_backend.webapp import helpers
 sys.path.append(os.getcwd())
 import logging
@@ -37,6 +40,7 @@ else:
 
 @app.on_event("startup")
 async def startup():
+
     await data.set_up_metadata()
 
 
@@ -62,7 +66,7 @@ class PathFilter(logging.Filter):
 logging.basicConfig(
     level=logging.DEBUG,
     format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-    datefmt='%H:%M:%S'
+    datefmt='%Y-%m-%d, %H:%M:%S'
 )
 logging.root.handlers = [
         logging.FileHandler(f"{os.path.dirname(__file__)}/logging.log"),
@@ -97,7 +101,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
+    expose_headers=["x-authorization"]
 )
 
 app.add_middleware(SessionMiddleware, secret_key='!secret')
@@ -106,22 +110,21 @@ app.add_middleware(TrustedHostMiddleware)
 
 # app.add_middleware(HTTPSRedirectMiddleware)
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    idem = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    logger.info(f"rid={idem} start request path={request.url.path}")
-    start_time = time.time()
-
-    response = await call_next(request)
-
-    process_time = (time.time() - start_time) * 1000
-    formatted_process_time = '{0:.2f}'.format(process_time)
-    if response.status_code >= 400:
-        logger.error(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
-    else:
-        logger.info(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
-
-    return response
+# @app.middleware("http")
+# async def log_requests(request: Request, call_next):
+#     idem = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+#     logger.info(f"rid={idem} start request path={request.url.path}")
+#     start_time = time.time()
+#
+#     response = await call_next(request)
+#     process_time = (time.time() - start_time) * 1000
+#     formatted_process_time = '{0:.2f}'.format(process_time)
+#     if response.status_code >= 400:
+#         logger.error(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
+#     else:
+#         logger.info(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
+#
+#     return response
 
 
 @app.get("/")

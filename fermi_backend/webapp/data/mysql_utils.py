@@ -9,7 +9,7 @@ import traceback
 
 import numpy as np
 from sqlalchemy import create_engine
-from fermi_backend.webapp.config import MYSQL_CONNECTION_URL_SYNC
+from fermi_backend.webapp.config import PSQL_CONNECTION_URL_SYNC
 from fermi_backend.webapp import helpers
 import pandas as pd
 import asyncio
@@ -37,7 +37,7 @@ async def insert_into_sql(df: pd.DataFrame, table_name: str, extra_space: int = 
         table = await session.execute(f"""SHOW TABLES LIKE '{table_name}' """)
         table = helpers.parse_sql_results(table)
         # if table already exists, just insert
-        sync_engine = create_engine(MYSQL_CONNECTION_URL_SYNC)
+        sync_engine = create_engine(PSQL_CONNECTION_URL_SYNC)
         if table:
             df.to_sql(table_name, sync_engine, if_exists='append', index=False)
         # else, create table from the given df

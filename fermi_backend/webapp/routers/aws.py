@@ -48,7 +48,7 @@ async def get_file_structure(bucket_name: str, key: str):
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",
                               date_done=str(datetime.utcnow().isoformat()))
     else:
-        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"get file structure {bucket_name}/{key}", result=result,
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, message=f"get file structure {bucket_name}/{key}", content=result,
                               date_done=str(datetime.utcnow().isoformat()))
 
 

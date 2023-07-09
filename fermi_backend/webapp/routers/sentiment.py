@@ -1,6 +1,8 @@
 import traceback
 
 from fastapi import APIRouter
+
+from .. import CONSTS
 from ..webapp_models.generic_models import ResultResponse
 
 from fermi_backend.models.Sentiment.Analysis import news_analyzer, txt_analyzer, txt_summation, tweets_analyzer, reddits_analyzer
@@ -20,7 +22,7 @@ async def get_recent_news_sentiment():
             result[k] = v.to_json(orient='records')
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.get("/get_single_stock_news_sentiment/{ticker}")
@@ -31,7 +33,7 @@ async def get_single_stock_news_sentiment(ticker):
             result[k] = v.to_json(orient='records')
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.post("/get_text_sentiment")
@@ -40,7 +42,7 @@ async def get_text_sentiment(texts: str):
         result = txt_analyzer(texts)
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.get("/financial_summary")
@@ -49,7 +51,7 @@ async def financial_summary(texts: str):
         result = txt_summation(texts)
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.post("/get_tweets_sentiment")
@@ -77,7 +79,7 @@ def get_tweets_sentiment(search_requirement: dict):
             result[k] = v.to_json(orient='records')
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.get("/get_reddits_sentiment")
@@ -86,4 +88,4 @@ async def get_reddits_sentiment(search_requirement: str, tweets_num: int = None)
         result = reddits_analyzer(search_requirement, tweets_num)
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)

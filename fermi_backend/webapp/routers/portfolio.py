@@ -7,7 +7,6 @@ from ..helpers import round_result
 from fermi_backend.models.Portfolio import Portfolio
 from ..webapp_models.generic_models import ResultResponse, Data, CDSData
 from ..CONSTS import ANALYTICS_DECIMALS
-from ..webapp_models.generic_models import ResultResponse
 import pandas as pd
 
 router = APIRouter(
@@ -28,7 +27,7 @@ def get_basic_info(data: Data) -> ResultResponse:
         result = basic_info[reorder].to_json(orient='records')
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @round_result(ANALYTICS_DECIMALS)
@@ -48,7 +47,7 @@ def valueatrisk(requestbody: dict) -> ResultResponse:
         result = get_all_var(data, weights, level, decay, n)
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @round_result(ANALYTICS_DECIMALS)
@@ -67,7 +66,7 @@ def weights_optimization_api(requestbody: dict) -> ResultResponse:
         result = weights_optimization(data, weights, expected_return)
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.post("/sharpe_ratio")
@@ -78,4 +77,4 @@ def sharpe_ratio(requestbody: dict) -> ResultResponse:
         result = p.sharpe_r(requestbody['rf'])
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)

@@ -8,7 +8,7 @@ from jwt import encode as jwt_encode, decode as jwt_decode, PyJWTError
 from fermi_backend.webapp import cache
 from fermi_backend.webapp import config
 from fermi_backend.webapp.auth.db_authclients import get_db_client
-from fermi_backend.webapp.exceptions import UnauthorizedUser
+from fermi_backend.webapp.exceptions import UnauthorizedUser, router_error_handler
 from fermi_backend.webapp.webapp_models.db_models import InternalUser
 from fermi_backend.webapp.webapp_models.auth_models import (
 	InternalAccessTokenData,
@@ -127,7 +127,6 @@ async def create_internal_access_token(access_token_data: InternalAccessTokenDat
 	encoded_jwt = jwt_encode(to_encode, config.JWT_SECRET_KEY, algorithm=config.ALGORITHM)
 
 	return encoded_jwt #.decode('utf-8')
-
 
 async def validate_internal_access_token(internal_access_token: str) -> InternalUser:
 	""" Checks the validity of an internal access token. If the token

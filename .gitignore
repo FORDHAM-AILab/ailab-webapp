@@ -8,6 +8,7 @@ venv/*
 **/*.idea/
 **/__pycache__
 **/*.pyc
+**/*.sql
 
 **/.DS_Store
 **/*.log

@@ -15,6 +15,7 @@ class InternalUser(BaseModel):
     first_name: Optional[str]
     last_name: Optional[str]
     area_of_interest: Optional[str]
+    picture: Optional[str]
 
 
 class UserRole(BaseModel):

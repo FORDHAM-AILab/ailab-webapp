@@ -11,7 +11,7 @@ import copy
 from contextlib import asynccontextmanager
 
 from sqlalchemy.orm import scoped_session
-from . import mysql_session_factory, CONSTS
+from . import psql_session_factory, CONSTS
 from .CONSTS import TIME_ZONE
 from .webapp_models.generic_models import ResultResponse
 import asyncio
@@ -41,16 +41,17 @@ def sqlquote(value):
 
 
 def standard_response(function):
+    # TODO: merge with exception handler wrapper
     @wraps(function)
     def wrapper(*args, **kwargs):
         try:
             rst = function(*args, **kwargs)
         except Exception as e:
-            return ResultResponse(status='-1', message=f"An exception occurred: {str(e)}",
+            return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred: {str(e)}",
                                   debug=traceback.format_exc(),
                                   date_done=str(datetime.now(TIME_ZONE).isoformat()))
         else:
-            return ResultResponse(status='0', message="Succeed", result=rst,
+            return ResultResponse(status_code=CONSTS.HTTP_200_OK, message="Succeed", content=rst,
                                   date_done=str(datetime.now(TIME_ZONE).isoformat()))
 
     return wrapper
@@ -194,7 +195,7 @@ def parse_sql_results(result_proxy, orient="records"):
 
 
 @asynccontextmanager
-async def sql_session_scope(sql_session_factory=mysql_session_factory):
+async def sql_session_scope(sql_session_factory=psql_session_factory):
     session = scoped_session(sql_session_factory)
     try:
         yield session
@@ -205,7 +206,17 @@ async def sql_session_scope(sql_session_factory=mysql_session_factory):
     finally:
         await session.close()
 
-
+@asynccontextmanager
+async def get_session():
+    try:
+        async_session = session
+        async with async_session() as session:
+            yield session
+    except:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
 async def pd_read_sql_async(engine, sql, **kwargs):
     def read_sql_query(con, stmt):
         return pd.read_sql_query(stmt, con, **kwargs)

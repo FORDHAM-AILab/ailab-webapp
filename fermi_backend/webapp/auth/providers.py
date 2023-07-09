@@ -148,6 +148,7 @@ class GoogleAuthProvider(AuthProvider):
             email = userinfo_response.json()["email"]
             sub_id = userinfo_response.json()["sub"]
             username = userinfo_response.json()["given_name"]
+            picture = userinfo_response.json()["picture"]
         else:
             raise UnauthorizedUser("User account not verified by Google.")
 
@@ -155,6 +156,7 @@ class GoogleAuthProvider(AuthProvider):
             email=email,
             username=username,
             external_sub_id=sub_id,
+            picture=picture
         )
 
         return external_user

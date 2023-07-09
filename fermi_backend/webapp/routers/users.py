@@ -23,11 +23,11 @@ access_token_cookie_scheme = auth_schemes.AccessTokenCookieBearer()
 async def get_user_profile(internal_user: InternalUser = Depends(access_token_cookie_scheme)) -> ResultResponse:
     try:
         async with helpers.sql_session_scope() as session:
-            result = session.execute("""SELECT * FROM fermi.users WHERE internal_sub_id = :internal_sub_id""",
+            result = session.execute("""SELECT * FROM users WHERE internal_sub_id = :internal_sub_id""",
                                      {'internal_sub_id': internal_user.internal_sub_id})
             result = result[0]
 
-        return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result,
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result,
                               date_done=str(datetime.now(CONSTS.TIME_ZONE).isoformat()))
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"{str(e)}:\n{traceback.format_exc()}",

@@ -3,6 +3,7 @@ import traceback
 from fastapi import APIRouter
 
 from fermi_backend.webapp.data.stock import get_analysis_info
+from .. import CONSTS
 from ..webapp_models.generic_models import ResultResponse
 
 router = APIRouter(
@@ -20,4 +21,4 @@ async def get_analysis_info_api(ticker):
             result[k] = v.to_json(orient='records')
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)

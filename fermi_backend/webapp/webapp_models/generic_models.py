@@ -1,6 +1,11 @@
+import typing
+
+import starlette.responses
 from pydantic import BaseModel
 from typing import List, Optional, Union
 import datetime
+
+from starlette.background import BackgroundTask
 
 
 class Data(BaseModel):
@@ -18,12 +23,10 @@ class ReceiveTag(BaseModel):
 
 
 class ResultResponse(BaseModel):
-    # TODO: unify status -> status_code, unify status code to http.status
-    # status = -1 means error, >=0 means succeed.
-    status_code: Optional[Union[str, int]] = None
+    status_code: str
+    content: Optional[typing.Any] = None
     message: Optional[str] = None
-    result: Optional[Union[float, int, str, list, dict]] = None
-    date_done: Optional[datetime.datetime] = None
+    date_done: Optional[str] = None
     debug: Optional[str] = None
 
 
@@ -52,5 +55,3 @@ class DataIntegrator(BaseModel):
     start_date: str
     end_date: str
     table_columns: dict
-
-

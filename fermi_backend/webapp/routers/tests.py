@@ -20,7 +20,7 @@ router = APIRouter(
 @router.get("/app")
 def test():
 
-    return ResultResponse(status=CONSTS.HTTP_200_OK, message="Success")
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, message="Success")
 
 
 @router.get("/test_db", tags=['test'])
@@ -41,7 +41,7 @@ async def test_redis_cache():
     try:
         await cache.set("test", 'test_val')
         test_val = await cache.get('test')
-        return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=test_val)
+        return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=test_val)
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}")
 
@@ -50,7 +50,7 @@ async def test_redis_cache():
 
 @router.get("/env_info", tags=['test'])
 async def env_info():
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=ENV)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=ENV)
 
 
 

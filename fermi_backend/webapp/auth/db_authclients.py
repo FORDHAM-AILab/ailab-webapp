@@ -249,7 +249,7 @@ class MongoDBClient(DatabaseClient):
         return updated_user
 
 
-class AuthMySQLClient(DatabaseClient):
+class AuthPGDBClient(DatabaseClient):
 
     def __init__(self):
         pass
@@ -262,9 +262,8 @@ class AuthMySQLClient(DatabaseClient):
 
         encrypted_external_sub_id = await self._encrypt_external_sub_id(external_user)
         async with helpers.sql_session_scope() as session:
-            result = await session.execute(f"""SELECT * FROM users WHERE external_sub_id = "{encrypted_external_sub_id}" """)
+            result = await session.execute(f"""SELECT * FROM users WHERE external_sub_id = '{encrypted_external_sub_id}' """)
             result = helpers.parse_sql_results(result)
-
 
         if len(result) > 0:
             internal_user = InternalUser(
@@ -273,6 +272,7 @@ class AuthMySQLClient(DatabaseClient):
                 username=result[0]["username"],
                 email=result[0]["email"],
                 created_at=result[0]["created_at"],
+                picture=result[0]["picture"]
             )
 
         return internal_user
@@ -280,7 +280,7 @@ class AuthMySQLClient(DatabaseClient):
     async def get_user_by_internal_sub_id(self, internal_sub_id: str) -> InternalUser:
         internal_user = None
         async with helpers.sql_session_scope() as session:
-            result = await session.execute(f"""SELECT * FROM users WHERE internal_sub_id = "{internal_sub_id}" """)
+            result = await session.execute(f"""SELECT * FROM users WHERE internal_sub_id = '{internal_sub_id}' """)
             result = helpers.parse_sql_results(result)
 
         if len(result) > 0:
@@ -293,9 +293,10 @@ class AuthMySQLClient(DatabaseClient):
         unique_identifier = str(uuid4())
         created_at = datetime.datetime.utcnow()
         async with helpers.sql_session_scope() as session:
-            await session.execute(f"""INSERT INTO users (internal_sub_id, external_sub_id, username, email, created_at) 
-                             VALUES ("{unique_identifier}", "{encrypted_external_sub_id}", 
-                             "{external_user.username}", "{external_user.email}", "{created_at}")""")
+            await session.execute(f"""INSERT INTO users (internal_sub_id, external_sub_id, username, email, created_at, picture) 
+                             VALUES ('{unique_identifier}', '{encrypted_external_sub_id}', 
+                             '{external_user.username}', '{external_user.email}', 
+                             '{created_at}', '{external_user.picture}')""")
 
         internal_user = InternalUser(
             internal_sub_id=unique_identifier,
@@ -303,6 +304,7 @@ class AuthMySQLClient(DatabaseClient):
             username=external_user.username,
             email=external_user.email,
             created_at=created_at,
+            picture=external_user.picture
         )
 
         return internal_user
@@ -310,10 +312,10 @@ class AuthMySQLClient(DatabaseClient):
     async def update_internal_user(self, internal_user: InternalUser) -> Optional[InternalUser]:
 
         async with helpers.sql_session_scope() as session:
-            result = await session.execute(f"""UPDATE users SET external_sub_id = "{internal_user.external_sub_id}",
-                                                          username = "{internal_user.username}",
-                                                          email = "{internal_user.email}"
-                                         WHERE internal_sub_id = "{internal_user.internal_sub_id}" """)
+            result = await session.execute(f"""UPDATE users SET external_sub_id = '{internal_user.external_sub_id}',
+                                                          username = '{internal_user.username}',
+                                                          email = '{internal_user.email}'
+                                         WHERE internal_sub_id = '{internal_user.internal_sub_id}' """)
 
         if result.rowcount > 0:
             return internal_user

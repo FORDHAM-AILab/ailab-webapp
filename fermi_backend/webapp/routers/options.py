@@ -19,7 +19,7 @@ def get_options_expiration_date_api(ticker):
         result = get_options_expiration_date(ticker)
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.post("/get_options_data_api")
@@ -29,7 +29,7 @@ def get_options_data_api(requestBody: dict):
                                   requestBody['options_type'])
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
 
 
 @router.post("/options_pricing")
@@ -49,4 +49,4 @@ def options_pricing_api(request_body: dict):
             result = 0
     except Exception as e:
         return ResultResponse(status_code=CONSTS.HTTP_500_INTERNAL_SERVER_ERROR, message=f"An exception occurred {str(e)}:\n{traceback.format_exc()}", )
-    return ResultResponse(status_code=CONSTS.HTTP_200_OK, result=result)
+    return ResultResponse(status_code=CONSTS.HTTP_200_OK, content=result)
