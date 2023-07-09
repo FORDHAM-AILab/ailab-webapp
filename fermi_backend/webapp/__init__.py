@@ -14,6 +14,5 @@ else:
 engine = create_async_engine(config.PSQL_CONNECTION_URL, echo=False)
 psql_session_factory = sessionmaker(engine, class_=AsyncSession)
 # cache_db_client = get_db_client(config.CACHE_DB_TYPE)
-
-redis_cache = Redis(db=1)
+redis_cache = Redis(host=config.REDIS_ENDPOINT, db=1)
 

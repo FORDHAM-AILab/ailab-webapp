@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+from requests_html import HTMLSession
 from yahoo_fin import stock_info
 from typing import List
 import yfinance
+from yahoo_fin.stock_info import _convert_to_numeric
 
 
 def get_hist_stock_price(tickers, start_date, end_date):
@@ -37,16 +39,55 @@ def get_analysis_info(ticker:str):
     return stock_info.get_analysts_info(ticker)
 
 
+def _raw_get_daily_info(site):
+    session = HTMLSession()
+
+    resp = session.get(site)
+
+    tables = pd.read_html(resp.html.raw_html)
+
+    df = tables[0].copy()
+
+    df.columns = tables[0].columns
+
+    del df["52 Week Range"]
+
+    df.dropna(inplace=True)
+    df.reset_index(inplace=True)
+
+    df["% Change"] = df["% Change"].map(lambda x: float(x.strip("%+").replace(",", "")))
+
+    fields_to_change = [x for x in df.columns.tolist() if "Vol" in x \
+                        or x == "Market Cap"]
+
+    for field in fields_to_change:
+
+        if type(df[field][0]) == str:
+            df[field] = df[field].map(_convert_to_numeric)
+
+    session.close()
+
+    return df
+
+def get_day_gainers(count: int = 100):
+
+    return _raw_get_daily_info(f"https://finance.yahoo.com/gainers?offset=0&count={count}")
+
+
+def get_day_losers(count: int = 100):
+
+    return _raw_get_daily_info(f"https://finance.yahoo.com/losers?offset=0&count={count}")
+
 def get_top_gainers(time_range):
     if time_range == 'daily':
-        return stock_info.get_day_gainers()
+        return get_day_gainers()
     else:
         pass
 
 
 def get_top_losers(time_range):
     if time_range == 'daily':
-        return stock_info.get_day_losers()
+        return get_day_losers()
     else:
         pass
 
